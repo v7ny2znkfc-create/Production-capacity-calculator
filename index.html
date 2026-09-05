@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#111827" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Capacity" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <title>Production Capacity Calculator</title>
+  <style>
+    :root{
+      --bg:#f3f4f6;
+      --card:#ffffff;
+      --text:#111827;
+      --muted:#6b7280;
+      --line:#e5e7eb;
+      --accent:#111827;
+      --soft:#f9fafb;
+      --good:#0f766e;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,sans-serif;
+      background:var(--bg);
+      color:var(--text);
+    }
+    .wrap{max-width:980px;margin:auto;padding:24px 16px 48px}
+    .hero{
+      background:linear-gradient(135deg,#111827,#374151);
+      color:#fff;border-radius:22px;padding:26px 24px;margin-bottom:18px;
+      box-shadow:0 10px 28px rgba(0,0,0,.12);
+    }
+    .hero h1{margin:0 0 6px;font-size:clamp(26px,4vw,40px)}
+    .hero p{margin:0;color:#d1d5db;font-size:15px}
+    .tabs{
+      display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px
+    }
+    .tab{
+      border:none;background:#fff;border-radius:14px;padding:14px 10px;
+      font-weight:700;color:#374151;cursor:pointer;
+      box-shadow:0 4px 14px rgba(0,0,0,.06);
+      border:1px solid var(--line);
+    }
+    .tab.active{background:#111827;color:#fff;border-color:#111827}
+    .panel{display:none}
+    .panel.active{display:block}
+    .card{
+      background:var(--card);border:1px solid var(--line);border-radius:20px;
+      padding:22px;box-shadow:0 8px 22px rgba(0,0,0,.05);
+    }
+    .card h2{margin:0 0 4px;font-size:22px}
+    .desc{margin:0 0 20px;color:var(--muted);font-size:14px}
+    .grid{
+      display:grid;grid-template-columns:repeat(2,1fr);gap:14px
+    }
+    label{
+      display:block;font-size:13px;color:#374151;font-weight:700;margin-bottom:6px
+    }
+    .input-wrap{position:relative}
+    input{
+      width:100%;padding:14px 72px 14px 14px;border:1px solid #d1d5db;
+      border-radius:12px;font-size:18px;outline:none;background:#fff;
+    }
+    input:focus{border-color:#6b7280;box-shadow:0 0 0 3px rgba(107,114,128,.12)}
+    .unit{
+      position:absolute;right:12px;top:50%;transform:translateY(-50%);
+      color:#6b7280;font-size:13px;font-weight:700
+    }
+    .result{
+      margin-top:18px;padding:20px;border-radius:16px;background:#f0fdfa;
+      border:1px solid #99f6e4;text-align:center
+    }
+    .result .label{color:#115e59;font-size:13px;font-weight:800;text-transform:uppercase}
+    .result .value{font-size:clamp(34px,7vw,54px);font-weight:900;color:var(--good);line-height:1.05;margin-top:4px}
+    .result .runit{font-size:16px;color:#115e59;font-weight:800;margin-top:4px}
+    .formula{
+      margin-top:16px;background:var(--soft);border:1px dashed #d1d5db;
+      border-radius:12px;padding:12px 14px;font-size:13px;color:#4b5563;
+      overflow:auto
+    }
+    .actions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
+    button.secondary{
+      border:1px solid #d1d5db;background:#fff;color:#374151;
+      padding:10px 14px;border-radius:10px;font-weight:700;cursor:pointer
+    }
+    .note{
+      margin-top:16px;color:#6b7280;font-size:12px;text-align:center
+    }
+    @media(max-width:720px){
+      .tabs{grid-template-columns:1fr}
+      .grid{grid-template-columns:1fr}
+      .wrap{padding:14px 12px 30px}
+      .hero{padding:22px 18px;border-radius:18px}
+      .card{padding:18px}
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <section class="hero">
+    <h1>Production Capacity Calculator</h1>
+    <p>เครื่องมือคำนวณ Capacity สำหรับใช้งานหน้างาน • V2</p>
+  </section>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="volume">1. Volume by Quantity</button>
+    <button class="tab" data-tab="speed">2. Capacity by Speed</button>
+    <button class="tab" data-tab="press">3. Press Factor</button>
+  </div>
+
+  <section id="volume" class="panel active">
+    <div class="card">
+      <h2>คำนวณคิวไม้จากจำนวนแผ่น</h2>
+      <p class="desc">กรอกขนาดแผ่นและจำนวนแผ่น ระบบจะคำนวณปริมาตรรวมอัตโนมัติ</p>
+      <div class="grid">
+        <div>
+          <label>Thickness (T)</label>
+          <div class="input-wrap"><input id="v_t" type="number" step="any" value="2.5"><span class="unit">mm</span></div>
+        </div>
+        <div>
+          <label>Width (W)</label>
+          <div class="input-wrap"><input id="v_w" type="number" step="any" value="2520"><span class="unit">mm</span></div>
+        </div>
+        <div>
+          <label>Length (L)</label>
+          <div class="input-wrap"><input id="v_l" type="number" step="any" value="7405"><span class="unit">mm</span></div>
+        </div>
+        <div>
+          <label>Quantity (n)</label>
+          <div class="input-wrap"><input id="v_n" type="number" step="1" value="1000"><span class="unit">แผ่น</span></div>
+        </div>
+      </div>
+      <div class="result">
+        <div class="label">Total Volume</div>
+        <div id="v_result" class="value">46.65</div>
+        <div class="runit">m³</div>
+      </div>
+      <div class="formula">สูตร: (T × W × L × n) ÷ 1,000³</div>
+      <div class="actions"><button class="secondary" onclick="resetVolume()">Reset</button></div>
+    </div>
+  </section>
+
+  <section id="speed" class="panel">
+    <div class="card">
+      <h2>คำนวณ Capacity จากความเร็ว</h2>
+      <p class="desc">คำนวณอัตราการผลิตจาก Thickness, Width และ Speed</p>
+      <div class="grid">
+        <div>
+          <label>Thickness (T)</label>
+          <div class="input-wrap"><input id="s_t" type="number" step="any" value="2.5"><span class="unit">mm</span></div>
+        </div>
+        <div>
+          <label>Width (W)</label>
+          <div class="input-wrap"><input id="s_w" type="number" step="any" value="2520"><span class="unit">mm</span></div>
+        </div>
+        <div>
+          <label>Speed (SP)</label>
+          <div class="input-wrap"><input id="s_sp" type="number" step="any" value="1600"><span class="unit">mm/s</span></div>
+        </div>
+      </div>
+      <div class="result">
+        <div class="label">Capacity</div>
+        <div id="s_result" class="value">36.29</div>
+        <div class="runit">m³/hr</div>
+      </div>
+      <div class="formula">สูตร: (T × W × SP × 3600) ÷ 1,000³</div>
+      <div class="actions"><button class="secondary" onclick="resetSpeed()">Reset</button></div>
+    </div>
+  </section>
+
+  <section id="press" class="panel">
+    <div class="card">
+      <h2>Press Factor</h2>
+      <p class="desc">คำนวณ Press Factor จาก Press Length, Speed และ Thickness</p>
+      <div class="grid">
+        <div>
+          <label>Thickness (T)</label>
+          <div class="input-wrap"><input id="p_t" type="number" step="any" value="12.8"><span class="unit">mm</span></div>
+        </div>
+        <div>
+          <label>Speed (SP)</label>
+          <div class="input-wrap"><input id="p_sp" type="number" step="any" value="320"><span class="unit">mm/s</span></div>
+        </div>
+        <div>
+          <label>Press Length</label>
+          <div class="input-wrap"><input id="p_l" type="number" step="any" value="28.41"><span class="unit">m</span></div>
+        </div>
+      </div>
+      <div class="result">
+        <div class="label">Press Factor</div>
+        <div id="p_result" class="value">6.94</div>
+        <div class="runit">s/mm</div>
+      </div>
+      <div class="formula">สูตร: (Press Length × 1000) ÷ (SP × T)</div>
+      <div class="actions"><button class="secondary" onclick="resetPress()">Reset</button></div>
+    </div>
+  </section>
+
+  <div class="note">ค่าที่กรอกล่าสุดจะถูกจำไว้ในเครื่องนี้อัตโนมัติ</div>
+</div>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const num = id => parseFloat($(id).value);
+  const fmt = v => Number.isFinite(v) ? v.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : '—';
+
+  function save(id){ localStorage.setItem('prodcalc_'+id, $(id).value); }
+  function load(id){
+    const v = localStorage.getItem('prodcalc_'+id);
+    if(v !== null) $(id).value = v;
+  }
+
+  function calcVolume(){
+    const t=num('v_t'), w=num('v_w'), l=num('v_l'), n=num('v_n');
+    const r=(t*w*l*n)/1e9;
+    $('v_result').textContent=fmt(r);
+    ['v_t','v_w','v_l','v_n'].forEach(save);
+  }
+  function calcSpeed(){
+    const t=num('s_t'), w=num('s_w'), sp=num('s_sp');
+    const r=(t*w*sp*3600)/1e9;
+    $('s_result').textContent=fmt(r);
+    ['s_t','s_w','s_sp'].forEach(save);
+  }
+  function calcPress(){
+    const t=num('p_t'), sp=num('p_sp'), l=num('p_l');
+    const r=(l*1000)/(sp*t);
+    $('p_result').textContent=fmt(r);
+    ['p_t','p_sp','p_l'].forEach(save);
+  }
+
+  function resetVolume(){
+    $('v_t').value=2.5; $('v_w').value=2520; $('v_l').value=7405; $('v_n').value=1000; calcVolume();
+  }
+  function resetSpeed(){
+    $('s_t').value=2.5; $('s_w').value=2520; $('s_sp').value=1600; calcSpeed();
+  }
+  function resetPress(){
+    $('p_t').value=12.8; $('p_sp').value=320; $('p_l').value=28.41; calcPress();
+  }
+
+  ['v_t','v_w','v_l','v_n'].forEach(id => $(id).addEventListener('input',calcVolume));
+  ['s_t','s_w','s_sp'].forEach(id => $(id).addEventListener('input',calcSpeed));
+  ['p_t','p_sp','p_l'].forEach(id => $(id).addEventListener('input',calcPress));
+
+  document.querySelectorAll('.tab').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+      btn.classList.add('active');
+      $(btn.dataset.tab).classList.add('active');
+    });
+  });
+
+  ['v_t','v_w','v_l','v_n','s_t','s_w','s_sp','p_t','p_sp','p_l'].forEach(load);
+  calcVolume(); calcSpeed(); calcPress();
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+  }
+</script>
+</body>
+</html>
