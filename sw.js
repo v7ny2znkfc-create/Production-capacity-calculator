@@ -1,4 +1,4 @@
-const CACHE_NAME = 'production-capacity-v3-2';
+const CACHE_NAME = 'production-capacity-v3-3';
 const APP_SHELL = [
   './',
   './index.html',

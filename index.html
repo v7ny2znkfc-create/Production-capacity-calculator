@@ -40,6 +40,7 @@ input{
   font-size:18px;color:#0f172a;background:#fff
 }
 input:focus{outline:none;border-color:#64748b;box-shadow:0 0 0 3px rgba(100,116,139,.12)}
+input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allowed}
 .unit{
   position:absolute;right:10px;top:50%;transform:translateY(-50%);
   font-size:12px;color:#64748b;font-weight:700;pointer-events:none
@@ -75,7 +76,7 @@ input:focus{outline:none;border-color:#64748b;box-shadow:0 0 0 3px rgba(100,116,
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time</p>
-    <div class="version">V3.2 PWA</div>
+    <div class="version">V3.3 PWA</div>
   </div>
 
   <div class="tabs">
@@ -124,11 +125,11 @@ input:focus{outline:none;border-color:#64748b;box-shadow:0 0 0 3px rgba(100,116,
 
   <section id="p" class="panel"><div class="card">
     <h2>Press Factor Solver</h2>
-    <div class="help">กรอก 3 ค่า และเว้นค่าที่ต้องการหา 1 ช่อง</div>
+    <div class="help">Press Length ถูกกำหนดคงที่ที่ 28.41 m • กรอก 2 ค่า และเว้นค่าที่ต้องการหา 1 ช่อง</div>
     <div class="grid">
       <div><label>Thickness</label><div class="iw"><input id="p_t" inputmode="decimal" type="number" step="any"><span class="unit">mm</span></div></div>
       <div><label>Speed</label><div class="iw"><input id="p_sp" inputmode="decimal" type="number" step="any"><span class="unit">mm/s</span></div></div>
-      <div><label>Press Length</label><div class="iw"><input id="p_l" inputmode="decimal" type="number" step="any"><span class="unit">m</span></div></div>
+      <div><label>Press Length (Fixed)</label><div class="iw"><input id="p_l" type="number" value="28.41" readonly aria-readonly="true" tabindex="-1"><span class="unit">m</span></div></div>
       <div><label>Press Factor</label><div class="iw"><input id="p_pf" inputmode="decimal" type="number" step="any"><span class="unit">s/mm</span></div></div>
     </div>
     <div class="buttons">
@@ -137,7 +138,7 @@ input:focus{outline:none;border-color:#64748b;box-shadow:0 0 0 3px rgba(100,116,
       <button class="btn secondary" onclick="exP()">Example</button>
     </div>
     <div id="p_status" class="status">พร้อมคำนวณ</div>
-    <div class="formula">Press Factor = (Press Length × 1000) ÷ (SP × T)</div>
+    <div class="formula">Press Factor = (28.41 × 1000) ÷ (SP × T)</div>
   </div></section>
 
   <section id="t" class="panel"><div class="card">
@@ -161,7 +162,7 @@ input:focus{outline:none;border-color:#64748b;box-shadow:0 0 0 3px rgba(100,116,
     </div>
   </div></section>
 
-  <div class="footer">V3.2 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
+  <div class="footer">V3.3 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
 </div>
 
 <script>
@@ -169,7 +170,7 @@ const $=x=>document.getElementById(x);
 const G={
   v:['v_t','v_w','v_l','v_n','v_cap'],
   c:['c_t','c_w','c_sp','c_cap'],
-  p:['p_t','p_sp','p_l','p_pf'],
+  p:['p_t','p_sp','p_pf'],
   t:['t_vol','t_cap','t_hr']
 };
 const val=x=>{
@@ -209,6 +210,7 @@ function ans(g,id,n,label,u){
 }
 function clearG(g){
   G[g].forEach(x=>{$(x).value='';$(x).classList.remove('solved')});
+  if(g==='p') $('p_l').value='28.41';
   status(g,'พร้อมคำนวณ');
   if(g==='t') $('time_detail').style.display='none';
 }
@@ -231,11 +233,11 @@ function solveC(){
 }
 function solveP(){
   const m=check('p'); if(!m)return;
-  const T=val('p_t'),S=val('p_sp'),L=val('p_l'),P=val('p_pf');
+  const T=val('p_t'),S=val('p_sp'),P=val('p_pf');
+  const L=28.41;
   if(m==='p_pf') ans('p',m,L*1000/(S*T),'Press Factor','s/mm');
   else if(m==='p_sp') ans('p',m,L*1000/(P*T),'Speed','mm/s');
-  else if(m==='p_t') ans('p',m,L*1000/(P*S),'Thickness','mm');
-  else ans('p',m,P*S*T/1000,'Press Length','m');
+  else ans('p',m,L*1000/(P*S),'Thickness','mm');
 }
 function solveT(){
   const m=check('t'); if(!m)return;
@@ -257,7 +259,7 @@ function solveT(){
 }
 function exV(){clearG('v');$('v_t').value=2.5;$('v_w').value=2520;$('v_l').value=7405;$('v_n').value=1000;solveV()}
 function exC(){clearG('c');$('c_t').value=2.5;$('c_w').value=2520;$('c_cap').value=50;solveC()}
-function exP(){clearG('p');$('p_t').value=12.8;$('p_sp').value=320;$('p_l').value=28.41;solveP()}
+function exP(){clearG('p');$('p_t').value=12.8;$('p_sp').value=320;solveP()}
 function exT(){clearG('t');$('t_vol').value=1000;$('t_cap').value=50;solveT()}
 
 document.querySelectorAll('.tab').forEach(b=>{
