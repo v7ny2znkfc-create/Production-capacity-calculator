@@ -1,8 +1,11 @@
-const CACHE_NAME = 'production-capacity-v3-1';
+const CACHE_NAME = 'production-capacity-v3-2';
 const APP_SHELL = [
   './',
   './index.html',
-  './manifest.webmanifest'
+  './manifest.webmanifest',
+  './apple-touch-icon.png',
+  './icon-192.png',
+  './icon-512.png'
 ];
 
 self.addEventListener('install', event => {
