@@ -126,7 +126,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V3.7 PWA</div>
+    <div class="version">V3.8 PWA</div>
   </div>
 
   <div class="tabs">
@@ -366,7 +366,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </table></div>
   </div></section>
 
-  <div class="footer">V3.7 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
+  <div class="footer">V3.8 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
 </div>
 
 <script>
@@ -549,19 +549,36 @@ setInterval(()=>{
 
 // ---------- Refiner Plate Record ----------
 const REFINER_KEY='production_cal_refiner_records_v1';
+const REFINER_SEED_VERSION_KEY='production_cal_refiner_seed_version';
+const REFINER_SEED_VERSION='2026-full-v1';
 let refinerEditId=null;
 const refinerSeed=[
-  {id:'seed-1',setNo:1,change:'2026-07-10',remove:'2026-07-21',prod:4977.70,hours:212.9,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:102.0},
-  {id:'seed-2',setNo:2,change:'2026-07-21',remove:'2026-08-20',prod:7474.00,hours:312.2,ps:'54SDQF03',pr:'54SDQM04',cs:'36SR1A04',cr:'36SQ1A04',bolt:'Change 72 set',sec:98.5},
-  {id:'seed-3',setNo:3,change:'2026-08-20',remove:'2026-09-01',prod:5445.40,hours:252.3,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:105.5},
-  {id:'seed-4',setNo:4,change:'2026-09-01',remove:'',prod:null,hours:null,ps:'58SDQM33',pr:'58SDQM31',cs:'36SR1A04',cr:'36SQ1A04',bolt:'Only 72 bolt',sec:null}
+  {id:'seed-2026-1',setNo:1,change:'2026-01-29',remove:'2026-03-04',prod:18183.90,hours:734.8,ps:'58SAQM64',pr:'58SAQC66',cs:'-',cr:'-',bolt:'-',sec:92.8},
+  {id:'seed-2026-2',setNo:2,change:'2026-03-04',remove:'2026-04-05',prod:16906.50,hours:666.9,ps:'58SAQM64',pr:'58SAQC66',cs:'-',cr:'-',bolt:'-',sec:103.2},
+  {id:'seed-2026-3',setNo:3,change:'2026-04-05',remove:'2026-05-19',prod:16702.80,hours:675.4,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:97.7},
+  {id:'seed-2026-4',setNo:4,change:'2026-05-19',remove:'2026-06-05',prod:9509.10,hours:381.9,ps:'58SAQM07',pr:'58SAQM01',cs:'-',cr:'-',bolt:'-',sec:101.7},
+  {id:'seed-2026-5',setNo:5,change:'2026-06-05',remove:'2026-07-10',prod:9812.00,hours:449.7,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:105.5},
+  {id:'seed-2026-6',setNo:6,change:'2026-07-10',remove:'2026-07-21',prod:4977.70,hours:212.9,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:102.0},
+  {id:'seed-2026-7',setNo:7,change:'2026-07-21',remove:'2026-08-20',prod:7474.00,hours:312.2,ps:'54SDQF03',pr:'54SDQM04',cs:'36SR1A04',cr:'36SQ1A04',bolt:'Change 72 set',sec:98.5},
+  {id:'seed-2026-8',setNo:8,change:'2026-08-20',remove:'2026-09-01',prod:5445.40,hours:252.3,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:105.5},
+  {id:'seed-2026-9',setNo:9,change:'2026-09-01',remove:'',prod:null,hours:null,ps:'58SDQM33',pr:'58SDQM31',cs:'36SR1A04',cr:'36SQ1A04',bolt:'Only 72 bolt',sec:null}
 ];
 function loadRefiner(){
   try{
     const d=JSON.parse(localStorage.getItem(REFINER_KEY)||'null');
-    if(Array.isArray(d)) return d;
+    if(Array.isArray(d)){
+      if(localStorage.getItem(REFINER_SEED_VERSION_KEY)!==REFINER_SEED_VERSION){
+        const userRecords=d.filter(x=>!String(x.id||'').startsWith('seed-'));
+        const merged=[...JSON.parse(JSON.stringify(refinerSeed)),...userRecords];
+        localStorage.setItem(REFINER_KEY,JSON.stringify(merged));
+        localStorage.setItem(REFINER_SEED_VERSION_KEY,REFINER_SEED_VERSION);
+        return merged;
+      }
+      return d;
+    }
   }catch(e){}
   localStorage.setItem(REFINER_KEY,JSON.stringify(refinerSeed));
+  localStorage.setItem(REFINER_SEED_VERSION_KEY,REFINER_SEED_VERSION);
   return JSON.parse(JSON.stringify(refinerSeed));
 }
 function saveRefinerData(d){localStorage.setItem(REFINER_KEY,JSON.stringify(d))}
