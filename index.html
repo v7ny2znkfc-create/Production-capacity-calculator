@@ -24,7 +24,7 @@ body{
 .hero h1{margin:0 0 5px;font-size:clamp(25px,4vw,38px)}
 .hero p{margin:0;color:#cbd5e1}
 .version{margin-top:8px;font-size:12px;color:#94a3b8}
-.tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:14px}
+.tabs{display:grid;grid-template-columns:repeat(8,1fr);gap:9px;margin-bottom:14px}
 .tab{
   background:#fff;border:1px solid #cbd5e1;padding:13px 8px;border-radius:12px;
   font-weight:800;cursor:pointer;color:#0f172a
@@ -136,6 +136,28 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   .home-menu,.home-menu.three{grid-template-columns:repeat(2,1fr)}
 }
 
+
+.recipe-search{display:flex;gap:10px;flex-wrap:wrap;align-items:end;margin:12px 0}
+.recipe-search>div{flex:1;min-width:220px}
+.recipe-search select,.recipe-search input{width:100%;padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;font-size:16px}
+.recipe-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start;flex-wrap:wrap;margin:14px 0}
+.recipe-name{font-size:28px;font-weight:900}
+.recipe-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.recipe-group{border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc;padding:14px}
+.recipe-group h3{margin:0 0 10px;font-size:14px;color:#475569}
+.recipe-row{display:flex;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px dashed #dbe3ec}
+.recipe-row:last-child{border-bottom:0}
+.recipe-row span:first-child{color:#64748b;font-size:12px}
+.recipe-row strong{font-size:14px;text-align:right}
+.recipe-form{margin-top:15px;padding:16px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc}
+.recipe-form .grid{grid-template-columns:repeat(3,1fr)}
+.recipe-note{font-size:12px;color:#64748b;line-height:1.45;margin-top:10px}
+@media(max-width:760px){
+  .recipe-grid{grid-template-columns:1fr 1fr}
+  .recipe-form .grid{grid-template-columns:1fr}
+}
+@media(max-width:460px){.recipe-grid{grid-template-columns:1fr}}
+
 .footer{text-align:center;color:#64748b;font-size:12px;margin:15px 0 4px}
 @media(max-width:760px){
   .tabs{grid-template-columns:repeat(2,1fr)}
@@ -150,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V4.0 PWA</div>
+    <div class="version">V4.1 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -162,6 +184,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <button class="tab" data-tab="r">5. Refiner Plate Record</button>
     <button class="tab" data-tab="g">6. Glue Flow</button>
     <button class="tab" data-tab="s">7. Sifter</button>
+    <button class="tab" data-tab="rec">8. Recipe</button>
   </div>
 
   <section id="h" class="panel active"><div class="card">
@@ -218,9 +241,10 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <button class="home-link" onclick="goPage('t')"><strong>Production Time</strong><span>Target / Capacity / Time</span></button>
     </div>
 
-    <div class="home-section-title">Equipment</div>
+    <div class="home-section-title">Equipment & Standard</div>
     <div class="home-menu three">
       <button class="home-link" onclick="goPage('r')"><strong>Refiner Plate Record</strong><span>ประวัติ Plate และ SEC</span></button>
+      <button class="home-link" onclick="goPage('rec')"><strong>Recipe Library</strong><span>Standard parameter by thickness</span></button>
     </div>
   </div></section>
 
@@ -451,7 +475,81 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </table></div>
   </div></section>
 
-  <div class="footer">V4.0 • Production Dashboard • PWA</div>
+
+  <section id="rec" class="panel"><div class="card">
+    <h2>Recipe Library</h2>
+    <div class="help">เลือก Recipe ตาม Thickness เพื่อดู Standard Parameter • Operator ดูได้ • Admin สามารถแก้ไขค่า Standard ได้</div>
+    <div class="recipe-search">
+      <div><label>Search / Select Recipe</label><select id="recipe_select" onchange="selectRecipe(this.value)"></select></div>
+      <div><label>Quick search</label><input id="recipe_search_text" type="text" placeholder="เช่น 7.3 NS, 8.0 HDF, 15.0 AM" oninput="filterRecipeOptions(this.value)"></div>
+      <button id="recipe_edit_btn" class="btn secondary admin-hidden" type="button" onclick="editCurrentRecipe()">Edit Recipe</button>
+    </div>
+
+    <div id="recipe_view">
+      <div class="recipe-head">
+        <div><div class="recipe-name" id="recipe_name">-</div><div class="dash-sub">Standard Production Recipe</div></div>
+        <span id="recipe_admin_badge" class="admin-badge admin-locked">View only</span>
+      </div>
+      <div class="recipe-grid">
+        <div class="recipe-group"><h3>Board</h3>
+          <div class="recipe-row"><span>Thickness Press</span><strong id="rv_press">-</strong></div>
+          <div class="recipe-row"><span>Density set</span><strong id="rv_density">-</strong></div>
+          <div class="recipe-row"><span>Glue Type</span><strong id="rv_gluetype">-</strong></div>
+          <div class="recipe-row"><span>Water</span><strong id="rv_water">-</strong></div>
+        </div>
+        <div class="recipe-group"><h3>Chemical</h3>
+          <div class="recipe-row"><span>Glue</span><strong id="rv_glue">-</strong></div>
+          <div class="recipe-row"><span>Hardener</span><strong id="rv_hardener">-</strong></div>
+          <div class="recipe-row"><span>Wax</span><strong id="rv_wax">-</strong></div>
+        </div>
+        <div class="recipe-group"><h3>Speed / Press</h3>
+          <div class="recipe-row"><span>Speed 90%</span><strong id="rv_s90">-</strong></div>
+          <div class="recipe-row"><span>Speed 95%</span><strong id="rv_s95">-</strong></div>
+          <div class="recipe-row"><span>Speed 100%</span><strong id="rv_s100">-</strong></div>
+          <div class="recipe-row"><span>Press Factor</span><strong id="rv_pf">-</strong></div>
+        </div>
+        <div class="recipe-group"><h3>Temperature ±5°C</h3>
+          <div class="recipe-row"><span>T1</span><strong id="rv_t1">-</strong></div>
+          <div class="recipe-row"><span>T2</span><strong id="rv_t2">-</strong></div>
+          <div class="recipe-row"><span>T3</span><strong id="rv_t3">-</strong></div>
+          <div class="recipe-row"><span>T4</span><strong id="rv_t4">-</strong></div>
+          <div class="recipe-row"><span>T5</span><strong id="rv_t5">-</strong></div>
+        </div>
+      </div>
+      <div class="recipe-note">ค่าชุดเริ่มต้นถอดจาก Production Data Glue UF (Domestic, Export) Advance fiber – Branch 2 ที่ผู้ใช้ให้มา ควรตรวจเทียบกับ Standard ล่าสุดของโรงงานก่อนใช้เป็นคำสั่งเดินเครื่อง</div>
+    </div>
+
+    <div id="recipe_form" class="recipe-form admin-hidden">
+      <h3>Edit Recipe</h3>
+      <div class="grid">
+        <div><label>Recipe name</label><input id="rf_name" type="text"></div>
+        <div><label>Thickness Press (mm)</label><input id="rf_press" type="number" step="any"></div>
+        <div><label>Density set (kg/m³)</label><input id="rf_density" type="number" step="any"></div>
+        <div><label>Glue Type</label><input id="rf_gluetype" type="text"></div>
+        <div><label>Water</label><input id="rf_water" type="text"></div>
+        <div><label>Glue (%)</label><input id="rf_glue" type="number" step="any"></div>
+        <div><label>Hardener (%)</label><input id="rf_hardener" type="number" step="any"></div>
+        <div><label>Wax (%)</label><input id="rf_wax" type="number" step="any"></div>
+        <div><label>Speed 90% (mm/s)</label><input id="rf_s90" type="number" step="any"></div>
+        <div><label>Speed 95% (mm/s)</label><input id="rf_s95" type="number" step="any"></div>
+        <div><label>Speed 100% (mm/s)</label><input id="rf_s100" type="number" step="any"></div>
+        <div><label>Press Factor</label><input id="rf_pf" type="number" step="any"></div>
+        <div><label>T1 (°C)</label><input id="rf_t1" type="number" step="any"></div>
+        <div><label>T2 (°C)</label><input id="rf_t2" type="number" step="any"></div>
+        <div><label>T3 (°C)</label><input id="rf_t3" type="number" step="any"></div>
+        <div><label>T4 (°C)</label><input id="rf_t4" type="number" step="any"></div>
+        <div><label>T5 (°C)</label><input id="rf_t5" type="number" step="any"></div>
+      </div>
+      <div class="buttons">
+        <button class="btn primary" type="button" onclick="saveCurrentRecipe()">Save Recipe</button>
+        <button class="btn secondary" type="button" onclick="cancelRecipeEdit()">Cancel</button>
+        <button class="btn secondary" type="button" onclick="restoreCurrentRecipe()">Restore Standard Seed</button>
+      </div>
+      <div class="recipe-note">การแก้ไข Recipe ในเวอร์ชันนี้ถูกบันทึกไว้ในอุปกรณ์เครื่องนี้เท่านั้น การแก้บนมือถือ Admin ยังไม่กระจายไปยังเครื่องอื่นอัตโนมัติ</div>
+    </div>
+  </div></section>
+
+  <div class="footer">V4.1 • Production Dashboard • Recipe Library</div>
 </div>
 
 <script>
@@ -629,6 +727,7 @@ function updateAdminUI(){
     ho.classList.toggle('admin-hidden',!on);
   }
   if(typeof syncGlueSettings==='function')syncGlueSettings();
+  if(typeof updateRecipeAdminUI==='function')updateRecipeAdminUI();
 }
 setInterval(()=>{
   if(!adminActive()){
@@ -958,6 +1057,89 @@ function renderSifterRecords(){
 
 
 
+
+// ---------- Recipe Library ----------
+const RECIPE_KEY='production_cal_recipes_v1';
+const RECIPE_SEED=[{"id":"recipe-1","name":"1.9 NS","press":1.9,"density":850,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.7,"speed90":1710,"speed95":1805,"speed100":1900,"pf":7.9,"t1":175,"t2":172,"t3":150,"t4":140,"t5":130},{"id":"recipe-2","name":"2.2 NS","press":2.2,"density":830,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.7,"speed90":1710,"speed95":1805,"speed100":1900,"pf":6.8,"t1":175,"t2":165,"t3":145,"t4":140,"t5":130},{"id":"recipe-3","name":"2.2","press":2.4,"density":830,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.7,"speed90":1710,"speed95":1805,"speed100":1900,"pf":6.3,"t1":182,"t2":178,"t3":158,"t4":140,"t5":138},{"id":"recipe-4","name":"2.3","press":2.55,"density":820,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.65,"speed90":1710,"speed95":1805,"speed100":1900,"pf":5.9,"t1":180,"t2":170,"t3":155,"t4":140,"t5":135},{"id":"recipe-5","name":"2.4","press":2.6,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.65,"speed90":1620,"speed95":1710,"speed100":1800,"pf":6.1,"t1":195,"t2":195,"t3":168,"t4":150,"t5":145},{"id":"recipe-6","name":"2.5 NS","press":2.5,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.7,"speed90":1620,"speed95":1710,"speed100":1800,"pf":6.3,"t1":185,"t2":180,"t3":163,"t4":143,"t5":140},{"id":"recipe-7","name":"2.5","press":2.7,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.65,"speed90":1530,"speed95":1615,"speed100":1700,"pf":6.2,"t1":190,"t2":190,"t3":165,"t4":143,"t5":140},{"id":"recipe-8","name":"2.6","press":2.8,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":1.5,"wax":0.65,"speed90":1530,"speed95":1615,"speed100":1700,"pf":6.0,"t1":185,"t2":175,"t3":160,"t4":142,"t5":140},{"id":"recipe-9","name":"2.7","press":2.95,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":1440,"speed95":1520,"speed100":1600,"pf":6.0,"t1":185,"t2":175,"t3":160,"t4":142,"t5":140},{"id":"recipe-10","name":"3.0","press":3.3,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":1260,"speed95":1330,"speed100":1400,"pf":6.2,"t1":188,"t2":178,"t3":160,"t4":148,"t5":140},{"id":"recipe-11","name":"3.2 NS","press":3.2,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.7,"speed90":1305,"speed95":1378,"speed100":1450,"pf":6.1,"t1":188,"t2":178,"t3":160,"t4":148,"t5":140},{"id":"recipe-12","name":"3.2 MD","press":3.55,"density":830,"glueType":"M182-8/M182-9","water":"0-25","glue":8.4,"hardener":2,"wax":1.0,"speed90":1170,"speed95":1235,"speed100":1300,"pf":6.2,"t1":195,"t2":187,"t3":185,"t4":170,"t5":155},{"id":"recipe-13","name":"3.2","press":3.55,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":1170,"speed95":1235,"speed100":1300,"pf":6.2,"t1":200,"t2":195,"t3":175,"t4":170,"t5":155},{"id":"recipe-14","name":"3.4","press":3.75,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":1125,"speed95":1188,"speed100":1250,"pf":6.1,"t1":210,"t2":205,"t3":190,"t4":170,"t5":155},{"id":"recipe-15","name":"3.6","press":3.95,"density":795,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":1035,"speed95":1093,"speed100":1150,"pf":6.3,"t1":205,"t2":205,"t3":190,"t4":170,"t5":155},{"id":"recipe-16","name":"4.0 NS","press":4.0,"density":790,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.7,"speed90":1035,"speed95":1093,"speed100":1150,"pf":6.2,"t1":220,"t2":200,"t3":190,"t4":170,"t5":155},{"id":"recipe-17","name":"4.0","press":4.45,"density":790,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":936,"speed95":988,"speed100":1040,"pf":6.2,"t1":200,"t2":200,"t3":180,"t4":165,"t5":150},{"id":"recipe-18","name":"4.2","press":4.6,"density":790,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":900,"speed95":950,"speed100":1000,"pf":6.2,"t1":220,"t2":215,"t3":200,"t4":172,"t5":155},{"id":"recipe-19","name":"4.5","press":4.85,"density":790,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.65,"speed90":837,"speed95":884,"speed100":930,"pf":6.3,"t1":217,"t2":217,"t3":207,"t4":175,"t5":155},{"id":"recipe-20","name":"4.75","press":5.15,"density":790,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.6,"speed90":810,"speed95":855,"speed100":900,"pf":6.1,"t1":220,"t2":218,"t3":220,"t4":180,"t5":162},{"id":"recipe-21","name":"4.75 AM","press":5.2,"density":760,"glueType":"M182-8/M182-9","water":"0-35","glue":6,"hardener":2,"wax":0.6,"speed90":801,"speed95":846,"speed100":890,"pf":6.2,"t1":220,"t2":215,"t3":215,"t4":180,"t5":162},{"id":"recipe-22","name":"5.0","press":5.45,"density":770,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.6,"speed90":765,"speed95":808,"speed100":850,"pf":6.2,"t1":220,"t2":219,"t3":210,"t4":175,"t5":155},{"id":"recipe-23","name":"5.2","press":5.65,"density":770,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.6,"speed90":738,"speed95":779,"speed100":820,"pf":6.2,"t1":220,"t2":219,"t3":210,"t4":175,"t5":155},{"id":"recipe-24","name":"5.5 NS","press":5.5,"density":770,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.7,"speed90":747,"speed95":789,"speed100":830,"pf":6.2,"t1":225,"t2":225,"t3":230,"t4":180,"t5":155},{"id":"recipe-25","name":"5.5","press":5.95,"density":770,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.6,"speed90":720,"speed95":760,"speed100":800,"pf":6.0,"t1":225,"t2":225,"t3":225,"t4":200,"t5":180},{"id":"recipe-26","name":"5.5 AM","press":5.95,"density":730,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.6,"speed90":684,"speed95":722,"speed100":760,"pf":6.3,"t1":221,"t2":220,"t3":218,"t4":175,"t5":155},{"id":"recipe-27","name":"6.0 NS","press":6.0,"density":760,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.7,"speed90":675,"speed95":713,"speed100":750,"pf":6.3,"t1":220,"t2":210,"t3":202,"t4":185,"t5":155},{"id":"recipe-28","name":"6.0","press":6.45,"density":760,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2,"wax":0.6,"speed90":648,"speed95":684,"speed100":720,"pf":6.1,"t1":220,"t2":210,"t3":202,"t4":185,"t5":155},{"id":"recipe-29","name":"7.0","press":7.5,"density":750,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2.5,"wax":0.6,"speed90":540,"speed95":570,"speed100":600,"pf":6.3,"t1":223,"t2":225,"t3":235,"t4":195,"t5":180},{"id":"recipe-30","name":"7.2","press":7.7,"density":730,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2.5,"wax":0.6,"speed90":522,"speed95":551,"speed100":580,"pf":6.4,"t1":223,"t2":222,"t3":235,"t4":195,"t5":180},{"id":"recipe-31","name":"7.3 NS","press":7.3,"density":730,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2.5,"wax":0.7,"speed90":558,"speed95":589,"speed100":620,"pf":6.3,"t1":223,"t2":222,"t3":220,"t4":190,"t5":175},{"id":"recipe-32","name":"7.3","press":7.8,"density":730,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2.5,"wax":0.6,"speed90":522,"speed95":551,"speed100":580,"pf":6.3,"t1":223,"t2":222,"t3":220,"t4":190,"t5":175},{"id":"recipe-33","name":"7.5","press":8.1,"density":740,"glueType":"M182-8/M182-9","water":"0-25","glue":6,"hardener":2.5,"wax":0.6,"speed90":513,"speed95":542,"speed100":570,"pf":6.2,"t1":230,"t2":230,"t3":240,"t4":205,"t5":190},{"id":"recipe-34","name":"7.7 NS","press":7.7,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.3,"hardener":2.5,"wax":0.7,"speed90":531,"speed95":561,"speed100":590,"pf":6.3,"t1":225,"t2":225,"t3":220,"t4":190,"t5":170},{"id":"recipe-35","name":"7.7","press":8.2,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.3,"hardener":2.5,"wax":0.7,"speed90":495,"speed95":523,"speed100":550,"pf":6.3,"t1":225,"t2":225,"t3":220,"t4":190,"t5":170},{"id":"recipe-36","name":"8.0","press":8.5,"density":740,"glueType":"M182-8/M182-9","water":"0-25","glue":6.3,"hardener":2.5,"wax":0.6,"speed90":477,"speed95":504,"speed100":530,"pf":6.3,"t1":230,"t2":235,"t3":225,"t4":215,"t5":180},{"id":"recipe-37","name":"8.0 AM","press":8.5,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.3,"hardener":2.5,"wax":0.6,"speed90":477,"speed95":504,"speed100":530,"pf":6.3,"t1":230,"t2":235,"t3":225,"t4":215,"t5":180},{"id":"recipe-38","name":"8.0 HDF","press":8.65,"density":850,"glueType":"M182-8/M182-9","water":"0-25","glue":9.5,"hardener":2.5,"wax":1.2,"speed90":405,"speed95":428,"speed100":450,"pf":7.3,"t1":220,"t2":220,"t3":230,"t4":210,"t5":175},{"id":"recipe-39","name":"9.0","press":9.5,"density":740,"glueType":"M182-8/M182-9","water":"0-25","glue":6.3,"hardener":2.5,"wax":0.6,"speed90":405,"speed95":428,"speed100":450,"pf":6.7,"t1":230,"t2":230,"t3":233,"t4":206,"t5":185},{"id":"recipe-40","name":"9.0 NS AM","press":9.0,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.3,"hardener":2.5,"wax":0.6,"speed90":432,"speed95":456,"speed100":480,"pf":6.6,"t1":227,"t2":227,"t3":240,"t4":190,"t5":175},{"id":"recipe-41","name":"9.0 AM","press":9.5,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.2,"hardener":2.5,"wax":0.6,"speed90":405,"speed95":428,"speed100":450,"pf":6.7,"t1":230,"t2":230,"t3":233,"t4":206,"t5":185},{"id":"recipe-42","name":"11.0","press":11.75,"density":720,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2.5,"wax":0.6,"speed90":324,"speed95":342,"speed100":360,"pf":6.7,"t1":230,"t2":230,"t3":245,"t4":220,"t5":190},{"id":"recipe-43","name":"12.0","press":12.8,"density":720,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":297,"speed95":314,"speed100":330,"pf":6.7,"t1":230,"t2":230,"t3":240,"t4":225,"t5":200},{"id":"recipe-44","name":"12.0 AM","press":12.8,"density":690,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":297,"speed95":314,"speed100":330,"pf":6.7,"t1":225,"t2":230,"t3":245,"t4":225,"t5":195},{"id":"recipe-45","name":"13.0","press":13.8,"density":720,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":270,"speed95":285,"speed100":300,"pf":6.9,"t1":226,"t2":227,"t3":225,"t4":195,"t5":170},{"id":"recipe-46","name":"14.0","press":14.8,"density":720,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":243,"speed95":257,"speed100":270,"pf":7.1,"t1":230,"t2":230,"t3":235,"t4":230,"t5":194},{"id":"recipe-47","name":"15.0","press":15.9,"density":710,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":225,"speed95":238,"speed100":250,"pf":7.2,"t1":228,"t2":230,"t3":243,"t4":225,"t5":194},{"id":"recipe-48","name":"15.0 AM","press":15.95,"density":680,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":225,"speed95":238,"speed100":250,"pf":7.1,"t1":230,"t2":235,"t3":245,"t4":230,"t5":194},{"id":"recipe-49","name":"16.0","press":16.9,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":207,"speed95":219,"speed100":230,"pf":7.3,"t1":230,"t2":230,"t3":240,"t4":225,"t5":205},{"id":"recipe-50","name":"16.0 AM","press":16.95,"density":680,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":207,"speed95":219,"speed100":230,"pf":7.3,"t1":230,"t2":230,"t3":245,"t4":225,"t5":205},{"id":"recipe-51","name":"16.5","press":17.4,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.5,"hardener":2,"wax":0.6,"speed90":198,"speed95":209,"speed100":220,"pf":7.4,"t1":230,"t2":230,"t3":220,"t4":220,"t5":194},{"id":"recipe-52","name":"17.0","press":17.9,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.9,"hardener":2,"wax":0.6,"speed90":180,"speed95":190,"speed100":200,"pf":8.0,"t1":235,"t2":237,"t3":243,"t4":230,"t5":195},{"id":"recipe-53","name":"17.5","press":18.4,"density":700,"glueType":"M182-8/M182-9","water":"0-25","glue":6.9,"hardener":2,"wax":0.6,"speed90":185,"speed95":195,"speed100":205,"pf":7.6,"t1":235,"t2":230,"t3":240,"t4":222,"t5":194},{"id":"recipe-54","name":"18.0","press":18.9,"density":690,"glueType":"M182-8/M182-9","water":"0-25","glue":6.9,"hardener":2,"wax":0.6,"speed90":180,"speed95":190,"speed100":200,"pf":7.5,"t1":235,"t2":230,"t3":230,"t4":215,"t5":180},{"id":"recipe-55","name":"18.0 AM","press":18.95,"density":670,"glueType":"M182-8/M182-9","water":"0-25","glue":6.9,"hardener":2,"wax":0.6,"speed90":180,"speed95":190,"speed100":200,"pf":7.5,"t1":235,"t2":235,"t3":245,"t4":230,"t5":200},{"id":"recipe-56","name":"19.0","press":19.9,"density":690,"glueType":"M182-8/M182-9","water":"0-25","glue":7.0,"hardener":2,"wax":0.6,"speed90":180,"speed95":190,"speed100":200,"pf":7.2,"t1":235,"t2":235,"t3":243,"t4":225,"t5":195},{"id":"recipe-57","name":"19.0 AM","press":19.95,"density":670,"glueType":"M182-8/M182-9","water":"0-25","glue":6.9,"hardener":2,"wax":0.6,"speed90":180,"speed95":190,"speed100":200,"pf":7.1,"t1":235,"t2":235,"t3":245,"t4":225,"t5":194},{"id":"recipe-58","name":"24.0","press":24.9,"density":680,"glueType":"M182-8/M182-9","water":"0-25","glue":8.8,"hardener":2,"wax":0.6,"speed90":131,"speed95":138,"speed100":145,"pf":7.9,"t1":235,"t2":235,"t3":243,"t4":222,"t5":190},{"id":"recipe-59","name":"25.0","press":25.9,"density":680,"glueType":"M182-8/M182-9","water":"0-25","glue":8.8,"hardener":2,"wax":0.6,"speed90":131,"speed95":138,"speed100":145,"pf":7.6,"t1":235,"t2":235,"t3":243,"t4":222,"t5":190}];
+let currentRecipeId=null;
+function loadRecipes(){
+  try{const x=JSON.parse(localStorage.getItem(RECIPE_KEY)||'null');if(Array.isArray(x)&&x.length)return x;}catch(e){}
+  localStorage.setItem(RECIPE_KEY,JSON.stringify(RECIPE_SEED));
+  return JSON.parse(JSON.stringify(RECIPE_SEED));
+}
+function saveRecipes(x){localStorage.setItem(RECIPE_KEY,JSON.stringify(x));}
+function fillRecipeSelect(list){
+  if(!$('recipe_select'))return;
+  const cur=$('recipe_select').value;
+  $('recipe_select').innerHTML=list.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
+  const exists=list.some(x=>x.id===cur);
+  if(exists)$('recipe_select').value=cur;
+  else if(list.length)$('recipe_select').value=list[0].id;
+}
+function initRecipeLibrary(){
+  const all=loadRecipes();fillRecipeSelect(all);
+  if(all.length)selectRecipe($('recipe_select').value||all[0].id);
+}
+function filterRecipeOptions(q){
+  const all=loadRecipes(), s=String(q||'').trim().toLowerCase();
+  const list=!s?all:all.filter(x=>x.name.toLowerCase().includes(s));
+  fillRecipeSelect(list);
+  if(list.length)selectRecipe(list[0].id);
+}
+function selectRecipe(id){
+  const x=loadRecipes().find(a=>a.id===id);if(!x)return;
+  currentRecipeId=id;
+  $('recipe_select').value=id;
+  $('recipe_name').textContent=x.name;
+  $('rv_press').textContent=Number(x.press).toFixed(2)+' mm';
+  $('rv_density').textContent=x.density+' kg/m³';
+  $('rv_gluetype').textContent=x.glueType;
+  $('rv_water').textContent=x.water+' kg liquid';
+  $('rv_glue').textContent=Number(x.glue).toFixed(2)+' %';
+  $('rv_hardener').textContent=Number(x.hardener).toFixed(2)+' %';
+  $('rv_wax').textContent=Number(x.wax).toFixed(2)+' %';
+  $('rv_s90').textContent=x.speed90+' mm/s';$('rv_s95').textContent=x.speed95+' mm/s';$('rv_s100').textContent=x.speed100+' mm/s';
+  $('rv_pf').textContent=Number(x.pf).toFixed(1);
+  ['t1','t2','t3','t4','t5'].forEach(k=>$( 'rv_'+k).textContent=x[k]+' °C');
+  updateRecipeAdminUI();
+}
+function updateRecipeAdminUI(){
+  if(!$('recipe_admin_badge'))return;
+  const on=adminActive();
+  $('recipe_admin_badge').textContent=on?'Admin edit enabled':'View only';
+  $('recipe_admin_badge').className='admin-badge '+(on?'admin-unlocked':'admin-locked');
+  $('recipe_edit_btn').classList.toggle('admin-hidden',!on);
+  if(!on)$('recipe_form').classList.add('admin-hidden');
+}
+function editCurrentRecipe(){
+  if(!requireAdmin())return;
+  const x=loadRecipes().find(a=>a.id===currentRecipeId);if(!x)return;
+  const map={name:'name',press:'press',density:'density',gluetype:'glueType',water:'water',glue:'glue',hardener:'hardener',wax:'wax',s90:'speed90',s95:'speed95',s100:'speed100',pf:'pf',t1:'t1',t2:'t2',t3:'t3',t4:'t4',t5:'t5'};
+  Object.entries(map).forEach(([f,k])=>$( 'rf_'+f).value=x[k]);
+  $('recipe_form').classList.remove('admin-hidden');
+  $('recipe_form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function saveCurrentRecipe(){
+  if(!requireAdmin())return;
+  const all=loadRecipes(), i=all.findIndex(x=>x.id===currentRecipeId);if(i<0)return;
+  const old=all[i];
+  const num=id=>Number($(id).value);
+  const x={...old,name:$('rf_name').value.trim()||old.name,press:num('rf_press'),density:num('rf_density'),glueType:$('rf_gluetype').value.trim(),water:$('rf_water').value.trim(),
+    glue:num('rf_glue'),hardener:num('rf_hardener'),wax:num('rf_wax'),speed90:num('rf_s90'),speed95:num('rf_s95'),speed100:num('rf_s100'),pf:num('rf_pf'),
+    t1:num('rf_t1'),t2:num('rf_t2'),t3:num('rf_t3'),t4:num('rf_t4'),t5:num('rf_t5')};
+  const numeric=['press','density','glue','hardener','wax','speed90','speed95','speed100','pf','t1','t2','t3','t4','t5'];
+  if(numeric.some(k=>!Number.isFinite(x[k]))||!x.glueType||!x.water){alert('กรุณากรอกค่า Recipe ให้ครบ');return;}
+  all[i]=x;saveRecipes(all);fillRecipeSelect(all);$('recipe_select').value=x.id;selectRecipe(x.id);$('recipe_form').classList.add('admin-hidden');
+  alert('Saved Recipe: '+x.name);
+}
+function cancelRecipeEdit(){$('recipe_form').classList.add('admin-hidden');}
+function restoreCurrentRecipe(){
+  if(!requireAdmin())return;
+  const seed=RECIPE_SEED.find(x=>x.id===currentRecipeId);if(!seed)return;
+  if(!confirm('Restore Recipe นี้กลับเป็นค่าจาก Standard Seed ?'))return;
+  const all=loadRecipes(),i=all.findIndex(x=>x.id===currentRecipeId);all[i]=JSON.parse(JSON.stringify(seed));saveRecipes(all);selectRecipe(currentRecipeId);cancelRecipeEdit();
+}
+
 // ---------- Home Dashboard ----------
 const HOME_SHIFT_KEY='production_cal_home_shift_v1';
 function todayISO(){return new Date().toISOString().slice(0,10)}
@@ -980,6 +1162,7 @@ function goPage(id){
   if(id==='g'){syncGlueSettings();renderGlueRecords();$('g_shift').value=getHomeShift();}
   if(id==='s'){renderSifterRecords();$('s_shift').value=getHomeShift();}
   if(id==='r')renderRefiner();
+  if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
   if(id==='h')refreshHomeDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1056,6 +1239,7 @@ if($('home_shift'))$('home_shift').value=getHomeShift();
 if($('g_shift'))$('g_shift').value=getHomeShift();
 if($('s_shift'))$('s_shift').value=getHomeShift();
 refreshHomeDashboard();
+initRecipeLibrary();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
