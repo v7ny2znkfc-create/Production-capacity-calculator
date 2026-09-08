@@ -24,7 +24,7 @@ body{
 .hero h1{margin:0 0 5px;font-size:clamp(25px,4vw,38px)}
 .hero p{margin:0;color:#cbd5e1}
 .version{margin-top:8px;font-size:12px;color:#94a3b8}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:14px}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:14px}
 .tab{
   background:#fff;border:1px solid #cbd5e1;padding:13px 8px;border-radius:12px;
   font-weight:800;cursor:pointer;color:#0f172a
@@ -63,9 +63,29 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 .formula{margin-top:12px;font-size:13px;color:#475569;line-height:1.5}
 .finish{margin-top:12px;padding:14px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0}
 .finish strong{font-size:19px}
+.record-toolbar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:12px 0}
+.record-toolbar select,.record-toolbar button{padding:10px 12px;border-radius:10px;border:1px solid #cbd5e1;background:#fff;font-weight:700}
+.record-table-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:12px;margin-top:14px}
+.record-table{width:100%;border-collapse:collapse;min-width:1180px;font-size:13px}
+.record-table th,.record-table td{padding:10px 9px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;text-align:center;vertical-align:middle}
+.record-table th{background:#f8fafc;font-weight:900;position:sticky;top:0}
+.record-table td.left{text-align:left}
+.record-table tr:last-child td{border-bottom:0}
+.record-table .inuse{font-weight:800;color:#0369a1}
+.record-actions{display:flex;gap:6px;justify-content:center}
+.mini-btn{padding:6px 8px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer;font-weight:700}
+.danger{color:#b91c1c;border-color:#fecaca;background:#fff7f7}
+.record-form{margin-top:14px;padding:16px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc}
+.record-form h3{margin:0 0 12px}
+.record-form .grid{grid-template-columns:repeat(3,1fr)}
+.record-form textarea{width:100%;min-height:46px;padding:11px;border:1px solid #cbd5e1;border-radius:10px;font:inherit;resize:vertical;background:#fff}
+.record-form select{width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff}
+.record-note{font-size:12px;color:#64748b;margin-top:8px;line-height:1.5}
+.set-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-weight:900;white-space:nowrap}
 .footer{text-align:center;color:#64748b;font-size:12px;margin:15px 0 4px}
 @media(max-width:760px){
-  .tabs,.grid{grid-template-columns:1fr}
+  .tabs{grid-template-columns:repeat(2,1fr)}
+  .grid,.record-form .grid{grid-template-columns:1fr}
   .wrap{padding:14px 12px 26px}
   .hero{padding:20px 17px}
 }
@@ -75,8 +95,8 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 <div class="wrap">
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
-    <p>Capacity • Speed • Press Factor • Production Time</p>
-    <div class="version">V3.3 PWA</div>
+    <p>Capacity • Speed • Press Factor • Production Time • Refiner Record</p>
+    <div class="version">V3.4 PWA</div>
   </div>
 
   <div class="tabs">
@@ -84,6 +104,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <button class="tab" data-tab="c">2. Capacity</button>
     <button class="tab" data-tab="p">3. Press Factor</button>
     <button class="tab" data-tab="t">4. Production Time</button>
+    <button class="tab" data-tab="r">5. Refiner Plate Record</button>
   </div>
 
   <section id="v" class="panel active"><div class="card">
@@ -162,7 +183,53 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V3.3 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
+  <section id="r" class="panel"><div class="card">
+    <h2>Refiner Plate Record</h2>
+    <div class="help">บันทึกประวัติการเปลี่ยน Refiner plate แยกเป็นชุดตามปี เช่น Set 1/2027, Set 2/2027 โดยระบบกำหนดเลขชุดให้อัตโนมัติ</div>
+
+    <div class="record-toolbar">
+      <label style="margin:0">Year</label>
+      <select id="r_year" onchange="renderRefiner()"></select>
+      <button class="btn secondary" type="button" onclick="newRefinerRecord()">+ New Record</button>
+      <button class="btn secondary" type="button" onclick="exportRefinerCSV()">Export CSV</button>
+    </div>
+
+    <div class="record-form" id="r_form">
+      <h3 id="r_form_title">Add Refiner Plate Record</h3>
+      <div class="grid">
+        <div><label>Date changed</label><div class="iw"><input id="r_change" type="date"></div></div>
+        <div><label>Date removed</label><div class="iw"><input id="r_remove" type="date"></div></div>
+        <div><label>Production</label><div class="iw"><input id="r_prod" inputmode="decimal" type="number" step="any"><span class="unit">t</span></div></div>
+        <div><label>Production time total</label><div class="iw"><input id="r_hours" inputmode="decimal" type="number" step="any"><span class="unit">hr</span></div></div>
+        <div><label>Refiner plate - Stator</label><div class="iw"><input id="r_ps" type="text"></div></div>
+        <div><label>Refiner plate - Rotor</label><div class="iw"><input id="r_pr" type="text"></div></div>
+        <div><label>Center ring - Stator</label><div class="iw"><input id="r_cs" type="text"></div></div>
+        <div><label>Center ring - Rotor</label><div class="iw"><input id="r_cr" type="text"></div></div>
+        <div><label>SEC avg.</label><div class="iw"><input id="r_sec" inputmode="decimal" type="number" step="any"><span class="unit">kWh/t</span></div></div>
+        <div style="grid-column:1/-1"><label>Bolt + washer / Note</label><textarea id="r_bolt" placeholder="เช่น Change 72 set, Only 72 bolt"></textarea></div>
+      </div>
+      <div class="buttons">
+        <button class="btn primary" type="button" onclick="saveRefinerRecord()">Save Record</button>
+        <button class="btn secondary" type="button" onclick="clearRefinerForm()">Clear</button>
+      </div>
+      <div id="r_status" class="status">พร้อมบันทึกข้อมูล</div>
+      <div class="record-note">ถ้ายังใช้งาน Plate อยู่ ให้เว้น Date removed ไว้ ระบบจะแสดง In use และนับอายุใช้งานถึงวันที่เปิดแอปให้อัตโนมัติ</div>
+    </div>
+
+    <div class="record-table-wrap">
+      <table class="record-table">
+        <thead>
+          <tr>
+            <th>Set</th><th>Date changed</th><th>Date removed</th><th>Production (t)</th><th>Production time (hr)</th><th>Used (day)</th>
+            <th>Plate Stator</th><th>Plate Rotor</th><th>Center ring Stator</th><th>Center ring Rotor</th><th>Bolt + washer</th><th>SEC avg. (kWh/t)</th><th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="r_body"></tbody>
+      </table>
+    </div>
+  </div></section>
+
+  <div class="footer">V3.4 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
 </div>
 
 <script>
@@ -262,6 +329,122 @@ function exC(){clearG('c');$('c_t').value=2.5;$('c_w').value=2520;$('c_cap').val
 function exP(){clearG('p');$('p_t').value=12.8;$('p_sp').value=320;solveP()}
 function exT(){clearG('t');$('t_vol').value=1000;$('t_cap').value=50;solveT()}
 
+
+// ---------- Refiner Plate Record ----------
+const REFINER_KEY='production_cal_refiner_records_v1';
+let refinerEditId=null;
+const refinerSeed=[
+  {id:'seed-1',setNo:1,change:'2026-07-10',remove:'2026-07-21',prod:4977.70,hours:212.9,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:102.0},
+  {id:'seed-2',setNo:2,change:'2026-07-21',remove:'2026-08-20',prod:7474.00,hours:312.2,ps:'54SDQF03',pr:'54SDQM04',cs:'36SR1A04',cr:'36SQ1A04',bolt:'Change 72 set',sec:98.5},
+  {id:'seed-3',setNo:3,change:'2026-08-20',remove:'2026-09-01',prod:5445.40,hours:252.3,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:105.5},
+  {id:'seed-4',setNo:4,change:'2026-09-01',remove:'',prod:null,hours:null,ps:'58SDQM33',pr:'58SDQM31',cs:'36SR1A04',cr:'36SQ1A04',bolt:'Only 72 bolt',sec:null}
+];
+function loadRefiner(){
+  try{
+    const d=JSON.parse(localStorage.getItem(REFINER_KEY)||'null');
+    if(Array.isArray(d)) return d;
+  }catch(e){}
+  localStorage.setItem(REFINER_KEY,JSON.stringify(refinerSeed));
+  return JSON.parse(JSON.stringify(refinerSeed));
+}
+function saveRefinerData(d){localStorage.setItem(REFINER_KEY,JSON.stringify(d))}
+function rNum(v,digits=2){
+  if(v===null||v===undefined||v==='')return '-';
+  const n=Number(v); if(!Number.isFinite(n))return '-';
+  return n.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+}
+function rDate(s){if(!s)return '-';const [y,m,d]=s.split('-');return `${d}/${m}/${y}`}
+function rDays(a,b){
+  if(!a)return null;
+  const end=b?new Date(b+'T00:00:00'):new Date();
+  const start=new Date(a+'T00:00:00');
+  return Math.max(0,Math.floor((end-start)/86400000));
+}
+function rYearOf(x){return x.change?Number(x.change.slice(0,4)):0}
+function refreshRefinerYears(prefer){
+  const data=loadRefiner();
+  const years=[...new Set(data.map(rYearOf).filter(Boolean))].sort((a,b)=>b-a);
+  const cur=new Date().getFullYear(); if(!years.includes(cur))years.unshift(cur);
+  const sel=$('r_year'); if(!sel)return;
+  const wanted=String(prefer||sel.value||years[0]||cur);
+  sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
+  if(years.map(String).includes(wanted))sel.value=wanted;
+}
+function renderRefiner(){
+  if(!$('r_body'))return;
+  refreshRefinerYears();
+  const year=Number($('r_year').value);
+  const rows=loadRefiner().filter(x=>rYearOf(x)===year).sort((a,b)=>(a.setNo||0)-(b.setNo||0));
+  $('r_body').innerHTML=rows.length?rows.map(x=>{
+    const days=rDays(x.change,x.remove);
+    const daysText=x.remove?String(days):`<span class="inuse">${days} (In use)</span>`;
+    return `<tr>
+      <td><span class="set-badge">Set ${x.setNo}/${year}</span></td>
+      <td>${rDate(x.change)}</td><td>${x.remove?rDate(x.remove):'<span class="inuse">In use</span>'}</td>
+      <td>${rNum(x.prod)}</td><td>${rNum(x.hours,1)}</td><td>${daysText}</td>
+      <td>${x.ps||'-'}</td><td>${x.pr||'-'}</td><td>${x.cs||'-'}</td><td>${x.cr||'-'}</td>
+      <td class="left">${x.bolt||'-'}</td><td>${rNum(x.sec,1)}</td>
+      <td><div class="record-actions"><button class="mini-btn" onclick="editRefiner('${x.id}')">Edit</button><button class="mini-btn danger" onclick="deleteRefiner('${x.id}')">Delete</button></div></td>
+    </tr>`
+  }).join(''):`<tr><td colspan="13">ยังไม่มีข้อมูลปี ${year}</td></tr>`;
+}
+function clearRefinerForm(){
+  refinerEditId=null;
+  ['r_change','r_remove','r_prod','r_hours','r_ps','r_pr','r_cs','r_cr','r_sec','r_bolt'].forEach(id=>$(id).value='');
+  $('r_form_title').textContent='Add Refiner Plate Record';
+  status('r','พร้อมบันทึกข้อมูล');
+}
+function newRefinerRecord(){clearRefinerForm();$('r_change').value=`${$('r_year').value}-01-01`; $('r_change').focus();}
+function nextSetNo(data,year){return Math.max(0,...data.filter(x=>rYearOf(x)===year).map(x=>Number(x.setNo)||0))+1}
+function saveRefinerRecord(){
+  const change=$('r_change').value, remove=$('r_remove').value;
+  if(!change){status('r','กรุณาระบุ Date changed','warn');return}
+  if(remove && new Date(remove)<new Date(change)){status('r','Date removed ต้องไม่ก่อน Date changed','warn');return}
+  const data=loadRefiner(); const year=Number(change.slice(0,4));
+  const obj={
+    id:refinerEditId||('r-'+Date.now()), setNo:null, change, remove,
+    prod:$('r_prod').value===''?null:Number($('r_prod').value),
+    hours:$('r_hours').value===''?null:Number($('r_hours').value),
+    ps:$('r_ps').value.trim()||'-', pr:$('r_pr').value.trim()||'-', cs:$('r_cs').value.trim()||'-', cr:$('r_cr').value.trim()||'-',
+    bolt:$('r_bolt').value.trim()||'-', sec:$('r_sec').value===''?null:Number($('r_sec').value)
+  };
+  if(refinerEditId){
+    const i=data.findIndex(x=>x.id===refinerEditId);
+    if(i<0)return;
+    const oldYear=rYearOf(data[i]);
+    obj.setNo=(oldYear===year)?data[i].setNo:nextSetNo(data,year);
+    data[i]=obj;
+  }else obj.setNo=nextSetNo(data,year);
+  saveRefinerData(data); refreshRefinerYears(year); $('r_year').value=String(year); renderRefiner();
+  clearRefinerForm(); status('r',`บันทึก Set ${obj.setNo}/${year} เรียบร้อย`,'good');
+}
+function editRefiner(id){
+  const x=loadRefiner().find(a=>a.id===id); if(!x)return;
+  refinerEditId=id;
+  $('r_change').value=x.change||'';$('r_remove').value=x.remove||'';$('r_prod').value=x.prod??'';$('r_hours').value=x.hours??'';
+  $('r_ps').value=x.ps==='-'?'':x.ps||'';$('r_pr').value=x.pr==='-'?'':x.pr||'';$('r_cs').value=x.cs==='-'?'':x.cs||'';$('r_cr').value=x.cr==='-'?'':x.cr||'';
+  $('r_bolt').value=x.bolt==='-'?'':x.bolt||'';$('r_sec').value=x.sec??'';
+  $('r_form_title').textContent=`Edit Set ${x.setNo}/${rYearOf(x)}`;
+  status('r',`กำลังแก้ไข Set ${x.setNo}/${rYearOf(x)}`);
+  $('r_form').scrollIntoView({behavior:'smooth',block:'start'});
+}
+function deleteRefiner(id){
+  const data=loadRefiner(), x=data.find(a=>a.id===id); if(!x)return;
+  if(!confirm(`Delete Set ${x.setNo}/${rYearOf(x)} ?`))return;
+  saveRefinerData(data.filter(a=>a.id!==id)); renderRefiner(); clearRefinerForm();
+}
+function exportRefinerCSV(){
+  const data=loadRefiner().sort((a,b)=>a.change.localeCompare(b.change));
+  const head=['Set','Date changed','Date removed','Production (t)','Production time (hr)','Used (day)','Plate Stator','Plate Rotor','Center ring Stator','Center ring Rotor','Bolt + washer','SEC avg. (kWh/t)'];
+  const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';
+  const lines=[head.map(esc).join(',')];
+  data.forEach(x=>lines.push([
+    `Set ${x.setNo}/${rYearOf(x)}`,rDate(x.change),x.remove?rDate(x.remove):'In use',x.prod??'',x.hours??'',rDays(x.change,x.remove),x.ps,x.pr,x.cs,x.cr,x.bolt,x.sec??''
+  ].map(esc).join(',')));
+  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Refiner_Plate_Record.csv';a.click();URL.revokeObjectURL(a.href);
+}
+
 document.querySelectorAll('.tab').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
@@ -270,6 +453,9 @@ document.querySelectorAll('.tab').forEach(b=>{
     $(b.dataset.tab).classList.add('active');
   });
 });
+
+refreshRefinerYears();
+renderRefiner();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
