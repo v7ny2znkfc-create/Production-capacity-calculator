@@ -112,6 +112,30 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   .calc-result-grid{grid-template-columns:repeat(2,1fr)}
 }
 
+
+.home-topbar{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-bottom:14px}
+.home-title h2{margin:0;font-size:26px}.home-title p{margin:3px 0 0;color:#64748b;font-size:13px}
+.dashboard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:14px 0}
+.dash-card{background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:16px}
+.dash-card h3{margin:0 0 10px;font-size:15px;color:#475569}
+.dash-value{font-size:26px;font-weight:900;line-height:1.15}
+.dash-sub{font-size:12px;color:#64748b;margin-top:6px;line-height:1.45}
+.dash-ok{background:#ecfdf5;border-color:#a7f3d0}
+.dash-warn{background:#fff7ed;border-color:#fdba74}
+.dash-danger{background:#fef2f2;border-color:#fca5a5}
+.dash-neutral{background:#f8fafc}
+.home-section-title{margin:22px 0 9px;font-size:14px;color:#475569;letter-spacing:.04em;text-transform:uppercase}
+.home-menu{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.home-menu.three{grid-template-columns:repeat(3,1fr)}
+.home-link{border:1px solid #e2e8f0;background:#fff;border-radius:14px;padding:16px 12px;text-align:left;cursor:pointer;color:#0f172a}
+.home-link:hover{border-color:#94a3b8}.home-link strong{display:block;font-size:15px;margin-bottom:4px}.home-link span{font-size:12px;color:#64748b}
+.shift-pill{display:inline-block;padding:5px 9px;border-radius:999px;background:#0f172a;color:#fff;font-size:12px;font-weight:900}
+.back-home{margin-bottom:12px}
+@media(max-width:760px){
+  .dashboard-grid{grid-template-columns:1fr}
+  .home-menu,.home-menu.three{grid-template-columns:repeat(2,1fr)}
+}
+
 .footer{text-align:center;color:#64748b;font-size:12px;margin:15px 0 4px}
 @media(max-width:760px){
   .tabs{grid-template-columns:repeat(2,1fr)}
@@ -126,11 +150,12 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V3.8 PWA</div>
+    <div class="version">V4.0 PWA</div>
   </div>
 
-  <div class="tabs">
-    <button class="tab active" data-tab="v">1. Volume</button>
+  <div class="tabs" id="main_tabs" style="display:none">
+    <button class="tab" data-tab="h">Home</button>
+    <button class="tab" data-tab="v">1. Volume</button>
     <button class="tab" data-tab="c">2. Capacity</button>
     <button class="tab" data-tab="p">3. Press Factor</button>
     <button class="tab" data-tab="t">4. Production Time</button>
@@ -139,7 +164,67 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <button class="tab" data-tab="s">7. Sifter</button>
   </div>
 
-  <section id="v" class="panel active"><div class="card">
+  <section id="h" class="panel active"><div class="card">
+    <div class="home-topbar">
+      <div class="home-title">
+        <h2>Production Dashboard</h2>
+        <p>ภาพรวมการตรวจประจำกะและสถานะอุปกรณ์</p>
+      </div>
+      <div>
+        <button id="home_admin_login" class="btn secondary" type="button" onclick="adminLogin()">Admin Login</button>
+        <button id="home_admin_logout" class="btn secondary admin-hidden" type="button" onclick="adminLogout()">Lock Admin</button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <strong>Current Shift</strong>
+      <select id="home_shift" onchange="setHomeShift(this.value)" style="padding:9px 12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:800">
+        <option value="A">Shift A</option>
+        <option value="B">Shift B</option>
+        <option value="C">Shift C</option>
+      </select>
+      <span id="home_admin_badge" class="admin-badge admin-locked">View / Operator mode</span>
+    </div>
+
+    <div class="dashboard-grid">
+      <div id="dash_glue" class="dash-card dash-neutral">
+        <h3>Glue Flow</h3><div id="dash_glue_value" class="dash-value">Pending</div>
+        <div id="dash_glue_sub" class="dash-sub">ยังไม่มีผลของกะนี้</div>
+      </div>
+      <div id="dash_sifter" class="dash-card dash-neutral">
+        <h3>Sifter</h3><div id="dash_sifter_value" class="dash-value">Pending</div>
+        <div id="dash_sifter_sub" class="dash-sub">ยังไม่มีผลของกะนี้</div>
+      </div>
+      <div id="dash_refiner" class="dash-card dash-neutral">
+        <h3>Refiner Plate</h3><div id="dash_refiner_value" class="dash-value">-</div>
+        <div id="dash_refiner_sub" class="dash-sub">กำลังอ่านข้อมูลล่าสุด</div>
+      </div>
+    </div>
+
+    <div id="shift_complete" class="status">Shift Check: Pending</div>
+
+    <div class="home-section-title">Shift Check</div>
+    <div class="home-menu three">
+      <button class="home-link" onclick="goPage('g')"><strong>Glue Flow</strong><span>ตรวจ Flow กาวประจำกะ</span></button>
+      <button class="home-link" onclick="goPage('s')"><strong>Sifter</strong><span>ตรวจ Fiber drop ประจำกะ</span></button>
+      <button class="home-link" onclick="refreshHomeDashboard()"><strong>Refresh Dashboard</strong><span>อัปเดตสถานะล่าสุด</span></button>
+    </div>
+
+    <div class="home-section-title">Calculators</div>
+    <div class="home-menu">
+      <button class="home-link" onclick="goPage('v')"><strong>Volume</strong><span>Volume / Quantity</span></button>
+      <button class="home-link" onclick="goPage('c')"><strong>Capacity</strong><span>Capacity / Speed</span></button>
+      <button class="home-link" onclick="goPage('p')"><strong>Press Factor</strong><span>Press length 28.41 m</span></button>
+      <button class="home-link" onclick="goPage('t')"><strong>Production Time</strong><span>Target / Capacity / Time</span></button>
+    </div>
+
+    <div class="home-section-title">Equipment</div>
+    <div class="home-menu three">
+      <button class="home-link" onclick="goPage('r')"><strong>Refiner Plate Record</strong><span>ประวัติ Plate และ SEC</span></button>
+    </div>
+  </div></section>
+
+  <section id="v" class="panel"><div class="card">
     <h2>Volume / Quantity Solver</h2>
     <div class="help">กรอกค่าที่ทราบ 4 ช่อง และเว้นว่าง 1 ช่องที่ต้องการหา</div>
     <div class="grid">
@@ -294,7 +379,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 
     <div class="grid">
       <div><label>Date</label><div class="iw"><input id="g_date" type="date"></div></div>
-      <div><label>Shift</label><div class="iw"><input id="g_shift" type="text" placeholder="เช่น A / B / C หรือ 1 / 2 / 3"></div></div>
+      <div><label>Shift</label><select id="g_shift" style="width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff"><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option></select></div>
       <div><label>Solid</label><div class="iw"><input id="g_solid" inputmode="decimal" type="number" step="any"><span class="unit">%</span></div></div>
       <div><label>Density</label><div class="iw"><input id="g_density" inputmode="decimal" type="number" step="any"><span class="unit">g/ml</span></div></div>
       <div><label>Fiber Screw</label><div class="iw"><input id="g_fiber" inputmode="decimal" type="number" step="any"><span class="unit">kg/min</span></div></div>
@@ -331,7 +416,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 
     <div class="grid">
       <div><label>Date</label><div class="iw"><input id="s_date" type="date"></div></div>
-      <div><label>Shift</label><div class="iw"><input id="s_shift" type="text" placeholder="เช่น A / B / C หรือ 1 / 2 / 3"></div></div>
+      <div><label>Shift</label><select id="s_shift" style="width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff"><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option></select></div>
       <div><label>Refiner production</label><div class="iw"><input id="s_refiner" inputmode="decimal" type="number" step="any"><span class="unit">t/hr</span></div></div>
       <div><label>Press performance</label><div class="iw"><input id="s_press" inputmode="decimal" type="number" step="any"><span class="unit">m³/hr</span></div></div>
       <div><label>Sifter 1</label><div class="iw"><input id="s_1" inputmode="decimal" type="number" step="any"><span class="unit">kg/min</span></div></div>
@@ -366,7 +451,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </table></div>
   </div></section>
 
-  <div class="footer">V3.8 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
+  <div class="footer">V4.0 • Production Dashboard • PWA</div>
 </div>
 
 <script>
@@ -535,6 +620,13 @@ function updateAdminUI(){
     gl.classList.toggle('admin-hidden',on);
     go.classList.toggle('admin-hidden',!on);
     gs.classList.toggle('admin-hidden',!on);
+  }
+  const hb=$('home_admin_badge'), hl=$('home_admin_login'), ho=$('home_admin_logout');
+  if(hb){
+    hb.textContent=on?'Admin mode':'View / Operator mode';
+    hb.className='admin-badge '+(on?'admin-unlocked':'admin-locked');
+    hl.classList.toggle('admin-hidden',on);
+    ho.classList.toggle('admin-hidden',!on);
   }
   if(typeof syncGlueSettings==='function')syncGlueSettings();
 }
@@ -752,7 +844,7 @@ function calculateGlue(){
   return r;
 }
 function clearGlue(){
-  ['g_shift','g_solid','g_density','g_fiber','g_actual','g_set'].forEach(id=>$(id).value='');
+  ['g_solid','g_density','g_fiber','g_actual','g_set'].forEach(id=>$(id).value='');
   ['g_wet_out','g_dry_out','g_pct_out','g_diff_out'].forEach(id=>$(id).textContent='-');
   const gb=$('g_result_box');
   if(gb){gb.classList.remove('alert-red','alert-orange');gb.classList.add('highlight');}
@@ -767,11 +859,11 @@ function exampleGlue(){
 function loadGlueRecords(){try{const x=JSON.parse(localStorage.getItem(GLUE_RECORD_KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
 function saveGlueRecord(){
   const r=calculateGlue(); if(!r)return;
-  const date=$('g_date').value||new Date().toISOString().slice(0,10), shift=$('g_shift').value.trim()||'-';
+  const date=$('g_date').value||new Date().toISOString().slice(0,10), shift=$('g_shift').value||'-';
   const data=loadGlueRecords();
   data.unshift({id:'g-'+Date.now(),date,shift,solid:r.solid,density:r.density,fiber:r.fiber,actual:r.actual,set:r.set,pct:r.pct,diff:r.diff,refSec:r.refSec,volumeL:r.volumeL});
   localStorage.setItem(GLUE_RECORD_KEY,JSON.stringify(data.slice(0,200)));
-  renderGlueRecords(); status('g','บันทึก Glue Flow ของกะนี้แล้ว','good');
+  renderGlueRecords(); refreshHomeDashboard(); status('g','บันทึก Glue Flow ของกะนี้แล้ว','good');
 }
 function deleteGlueRecord(id){
   if(!requireAdmin())return;
@@ -826,7 +918,7 @@ function calculateSifter(){
   return r;
 }
 function clearSifter(){
-  ['s_shift','s_refiner','s_press','s_1','s_2','s_sec'].forEach(id=>$(id).value='');
+  ['s_refiner','s_press','s_1','s_2','s_sec'].forEach(id=>$(id).value='');
   ['s1_hr_out','s2_hr_out','s_total_out','s_pct_out'].forEach(id=>$(id).textContent='-');
   const sb=$('s_result_box');
   if(sb){sb.classList.remove('alert-red','alert-orange');sb.classList.add('highlight');}
@@ -841,11 +933,11 @@ function exampleSifter(){
 function loadSifterRecords(){try{const x=JSON.parse(localStorage.getItem(SIFTER_RECORD_KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
 function saveSifterRecord(){
   const r=calculateSifter(); if(!r)return;
-  const date=$('s_date').value||new Date().toISOString().slice(0,10), shift=$('s_shift').value.trim()||'-';
+  const date=$('s_date').value||new Date().toISOString().slice(0,10), shift=$('s_shift').value||'-';
   const data=loadSifterRecords();
   data.unshift({id:'s-'+Date.now(),date,shift,refiner:r.refiner,press:r.press,s1:r.s1,s2:r.s2,total:r.total,pct:r.pct,sec:r.sec});
   localStorage.setItem(SIFTER_RECORD_KEY,JSON.stringify(data.slice(0,200)));
-  renderSifterRecords(); status('s','บันทึก Sifter ของกะนี้แล้ว','good');
+  renderSifterRecords(); refreshHomeDashboard(); status('s','บันทึก Sifter ของกะนี้แล้ว','good');
 }
 function deleteSifterRecord(id){
   if(!requireAdmin())return;
@@ -865,15 +957,91 @@ function renderSifterRecords(){
 }
 
 
+
+// ---------- Home Dashboard ----------
+const HOME_SHIFT_KEY='production_cal_home_shift_v1';
+function todayISO(){return new Date().toISOString().slice(0,10)}
+function setHomeShift(shift){
+  if(!['A','B','C'].includes(shift))shift='A';
+  localStorage.setItem(HOME_SHIFT_KEY,shift);
+  if($('g_shift'))$('g_shift').value=shift;
+  if($('s_shift'))$('s_shift').value=shift;
+  refreshHomeDashboard();
+}
+function getHomeShift(){
+  const x=localStorage.getItem(HOME_SHIFT_KEY)||'A';
+  return ['A','B','C'].includes(x)?x:'A';
+}
+function goPage(id){
+  document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
+  $(id).classList.add('active');
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));
+  $('main_tabs').style.display=id==='h'?'none':'grid';
+  if(id==='g'){syncGlueSettings();renderGlueRecords();$('g_shift').value=getHomeShift();}
+  if(id==='s'){renderSifterRecords();$('s_shift').value=getHomeShift();}
+  if(id==='r')renderRefiner();
+  if(id==='h')refreshHomeDashboard();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function latestShiftRecord(list,date,shift){
+  return list.find(x=>x.date===date && String(x.shift||'').toUpperCase()===shift)||null;
+}
+function setDashCard(id,kind){
+  const e=$(id); if(!e)return;
+  e.classList.remove('dash-ok','dash-warn','dash-danger','dash-neutral');
+  e.classList.add(kind);
+}
+function refreshHomeDashboard(){
+  if(!$('home_shift'))return;
+  const shift=getHomeShift(), date=todayISO();
+  $('home_shift').value=shift;
+
+  const g=latestShiftRecord(loadGlueRecords(),date,shift);
+  if(g){
+    $('dash_glue_value').textContent=Number(g.pct).toFixed(2)+'%';
+    const d=g.diff===null?null:Number(g.diff);
+    $('dash_glue_sub').textContent=d===null?'Shift '+shift:`Diff from set ${(d>=0?'+':'')+d.toFixed(2)}%`;
+    setDashCard('dash_glue',d!==null&&Math.abs(d)>0.30?'dash-danger':'dash-ok');
+  }else{
+    $('dash_glue_value').textContent='Pending';
+    $('dash_glue_sub').textContent='Shift '+shift+' • ยังไม่ได้บันทึกวันนี้';
+    setDashCard('dash_glue','dash-neutral');
+  }
+
+  const s=latestShiftRecord(loadSifterRecords(),date,shift);
+  if(s){
+    const p=Number(s.pct);
+    $('dash_sifter_value').textContent=p.toFixed(2)+'%';
+    $('dash_sifter_sub').textContent='Shift '+shift+' • Latest record';
+    setDashCard('dash_sifter',p>1?'dash-danger':p>0.5?'dash-warn':'dash-ok');
+  }else{
+    $('dash_sifter_value').textContent='Pending';
+    $('dash_sifter_sub').textContent='Shift '+shift+' • ยังไม่ได้บันทึกวันนี้';
+    setDashCard('dash_sifter','dash-neutral');
+  }
+
+  const ref=loadRefiner().filter(x=>x.change).sort((a,b)=>String(b.change).localeCompare(String(a.change)))[0];
+  if(ref){
+    const yr=String(ref.change).slice(0,4);
+    $('dash_refiner_value').textContent=`Set ${ref.setNo}/${yr}`;
+    if(!ref.remove){
+      const days=rDays(ref.change,'');
+      $('dash_refiner_sub').textContent=`In use • ${days} days`;
+      setDashCard('dash_refiner','dash-ok');
+    }else{
+      $('dash_refiner_sub').textContent='Latest recorded set';
+      setDashCard('dash_refiner','dash-neutral');
+    }
+  }
+
+  const complete=!!g&&!!s;
+  const box=$('shift_complete');
+  box.className='status '+(complete?'good':'warn');
+  box.innerHTML=complete?`<strong>Shift ${shift} Check Complete ✓</strong>`:`<strong>Shift ${shift} Check: Pending</strong> • ${!g?'Glue Flow ':''}${!s?'Sifter':''}`;
+}
+
 document.querySelectorAll('.tab').forEach(b=>{
-  b.addEventListener('click',()=>{
-    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
-    b.classList.add('active');
-    $(b.dataset.tab).classList.add('active');
-    if(b.dataset.tab==='g'){syncGlueSettings();renderGlueRecords();}
-    if(b.dataset.tab==='s'){renderSifterRecords();}
-  });
+  b.addEventListener('click',()=>goPage(b.dataset.tab));
 });
 
 refreshRefinerYears();
@@ -884,6 +1052,10 @@ updateAdminUI();
 renderRefiner();
 renderGlueRecords();
 renderSifterRecords();
+if($('home_shift'))$('home_shift').value=getHomeShift();
+if($('g_shift'))$('g_shift').value=getHomeShift();
+if($('s_shift'))$('s_shift').value=getHomeShift();
+refreshHomeDashboard();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
