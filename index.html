@@ -95,6 +95,10 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 .result-box .k{font-size:12px;color:#64748b;font-weight:800;margin-bottom:5px}
 .result-box .v{font-size:22px;font-weight:900}
 .result-box.highlight{background:#ecfdf5;border-color:#a7f3d0}
+
+.result-box.alert-orange{background:#fff7ed;border-color:#fdba74;color:#9a3412}
+.result-box.alert-red{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+
 .settings-box{margin:12px 0;padding:14px;border:1px dashed #94a3b8;border-radius:12px;background:#f8fafc}
 .settings-row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
 .settings-row>div{min-width:150px;flex:1}
@@ -122,7 +126,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V3.6 PWA</div>
+    <div class="version">V3.7 PWA</div>
   </div>
 
   <div class="tabs">
@@ -308,7 +312,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="calc-result-grid">
       <div class="result-box"><div class="k">Wet glue flow</div><div class="v" id="g_wet_out">-</div><div>kg/min</div></div>
       <div class="result-box"><div class="k">Glue solid flow</div><div class="v" id="g_dry_out">-</div><div>kg/min</div></div>
-      <div class="result-box highlight"><div class="k">Glue result</div><div class="v" id="g_pct_out">-</div><div>%</div></div>
+      <div class="result-box highlight" id="g_result_box"><div class="k">Glue result</div><div class="v" id="g_pct_out">-</div><div>%</div></div>
       <div class="result-box"><div class="k">Diff from set</div><div class="v" id="g_diff_out">-</div><div>% point</div></div>
     </div>
     <div id="g_status" class="status">พร้อมคำนวณ</div>
@@ -346,7 +350,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <div class="result-box"><div class="k">Sifter 1</div><div class="v" id="s1_hr_out">-</div><div>kg/hr</div></div>
       <div class="result-box"><div class="k">Sifter 2</div><div class="v" id="s2_hr_out">-</div><div>kg/hr</div></div>
       <div class="result-box"><div class="k">Total drop</div><div class="v" id="s_total_out">-</div><div>t/hr</div></div>
-      <div class="result-box highlight"><div class="k">Sifter result</div><div class="v" id="s_pct_out">-</div><div>%</div></div>
+      <div class="result-box highlight" id="s_result_box"><div class="k">Sifter result</div><div class="v" id="s_pct_out">-</div><div>%</div></div>
     </div>
     <div id="s_status" class="status">พร้อมคำนวณ</div>
     <div class="formula">
@@ -362,7 +366,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </table></div>
   </div></section>
 
-  <div class="footer">V3.6 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
+  <div class="footer">V3.7 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
 </div>
 
 <script>
@@ -719,12 +723,22 @@ function calculateGlue(){
   $('g_dry_out').textContent=r.dry.toFixed(2);
   $('g_pct_out').textContent=r.pct.toFixed(2);
   $('g_diff_out').textContent=r.diff===null?'-':(r.diff>=0?'+':'')+r.diff.toFixed(2);
-  status('g',`Glue Flow = ${r.pct.toFixed(2)}%`,'good');
+  const gb=$('g_result_box');
+  gb.classList.remove('alert-red','alert-orange','highlight');
+  if(r.diff!==null && Math.abs(r.diff)>0.30){
+    gb.classList.add('alert-red');
+    status('g',`Glue Flow = ${r.pct.toFixed(2)}% • Diff ${(r.diff>=0?'+':'')+r.diff.toFixed(2)}% เกิน ±0.30%`,'warn');
+  }else{
+    gb.classList.add('highlight');
+    status('g',`Glue Flow = ${r.pct.toFixed(2)}%`,'good');
+  }
   return r;
 }
 function clearGlue(){
   ['g_shift','g_solid','g_density','g_fiber','g_actual','g_set'].forEach(id=>$(id).value='');
   ['g_wet_out','g_dry_out','g_pct_out','g_diff_out'].forEach(id=>$(id).textContent='-');
+  const gb=$('g_result_box');
+  if(gb){gb.classList.remove('alert-red','alert-orange');gb.classList.add('highlight');}
   if($('g_date'))$('g_date').value=new Date().toISOString().slice(0,10);
   status('g','พร้อมคำนวณ');
 }
@@ -780,12 +794,25 @@ function calculateSifter(){
   $('s2_hr_out').textContent=r.h2.toFixed(3);
   $('s_total_out').textContent=r.total.toFixed(5);
   $('s_pct_out').textContent=r.pct.toFixed(2);
-  status('s',`Sifter = ${r.pct.toFixed(2)}%`,'good');
+  const sb=$('s_result_box');
+  sb.classList.remove('alert-red','alert-orange','highlight');
+  if(r.pct>1.00){
+    sb.classList.add('alert-red');
+    status('s',`Sifter = ${r.pct.toFixed(2)}% • High > 1.00%`,'warn');
+  }else if(r.pct>0.50){
+    sb.classList.add('alert-orange');
+    status('s',`Sifter = ${r.pct.toFixed(2)}% • Warning > 0.50%`,'warn');
+  }else{
+    sb.classList.add('highlight');
+    status('s',`Sifter = ${r.pct.toFixed(2)}%`,'good');
+  }
   return r;
 }
 function clearSifter(){
   ['s_shift','s_refiner','s_press','s_1','s_2','s_sec'].forEach(id=>$(id).value='');
   ['s1_hr_out','s2_hr_out','s_total_out','s_pct_out'].forEach(id=>$(id).textContent='-');
+  const sb=$('s_result_box');
+  if(sb){sb.classList.remove('alert-red','alert-orange');sb.classList.add('highlight');}
   if($('s_date'))$('s_date').value=new Date().toISOString().slice(0,10);
   status('s','พร้อมคำนวณ');
 }
