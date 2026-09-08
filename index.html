@@ -24,7 +24,7 @@ body{
 .hero h1{margin:0 0 5px;font-size:clamp(25px,4vw,38px)}
 .hero p{margin:0;color:#cbd5e1}
 .version{margin-top:8px;font-size:12px;color:#94a3b8}
-.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:9px;margin-bottom:14px}
+.tabs{display:grid;grid-template-columns:repeat(7,1fr);gap:9px;margin-bottom:14px}
 .tab{
   background:#fff;border:1px solid #cbd5e1;padding:13px 8px;border-radius:12px;
   font-weight:800;cursor:pointer;color:#0f172a
@@ -89,6 +89,25 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 .admin-unlocked{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
 .admin-hidden{display:none!important}
 
+
+.calc-result-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.result-box{padding:14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}
+.result-box .k{font-size:12px;color:#64748b;font-weight:800;margin-bottom:5px}
+.result-box .v{font-size:22px;font-weight:900}
+.result-box.highlight{background:#ecfdf5;border-color:#a7f3d0}
+.settings-box{margin:12px 0;padding:14px;border:1px dashed #94a3b8;border-radius:12px;background:#f8fafc}
+.settings-row{display:flex;gap:10px;align-items:end;flex-wrap:wrap}
+.settings-row>div{min-width:150px;flex:1}
+.readonly-setting{display:inline-flex;gap:7px;align-items:center;padding:7px 10px;border-radius:999px;background:#f1f5f9;border:1px solid #cbd5e1;font-weight:800;font-size:13px}
+.shift-table-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:12px;margin-top:16px}
+.shift-table{width:100%;border-collapse:collapse;min-width:900px;font-size:12px}
+.shift-table th,.shift-table td{padding:9px 8px;border-bottom:1px solid #e2e8f0;border-right:1px solid #e2e8f0;text-align:center;vertical-align:middle}
+.shift-table th{background:#f8fafc;font-weight:900}
+.shift-table tr:last-child td{border-bottom:0}
+@media(max-width:760px){
+  .calc-result-grid{grid-template-columns:repeat(2,1fr)}
+}
+
 .footer{text-align:center;color:#64748b;font-size:12px;margin:15px 0 4px}
 @media(max-width:760px){
   .tabs{grid-template-columns:repeat(2,1fr)}
@@ -102,8 +121,8 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 <div class="wrap">
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
-    <p>Capacity • Speed • Press Factor • Production Time • Refiner Record</p>
-    <div class="version">V3.5 PWA</div>
+    <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
+    <div class="version">V3.6 PWA</div>
   </div>
 
   <div class="tabs">
@@ -112,6 +131,8 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <button class="tab" data-tab="p">3. Press Factor</button>
     <button class="tab" data-tab="t">4. Production Time</button>
     <button class="tab" data-tab="r">5. Refiner Plate Record</button>
+    <button class="tab" data-tab="g">6. Glue Flow</button>
+    <button class="tab" data-tab="s">7. Sifter</button>
   </div>
 
   <section id="v" class="panel active"><div class="card">
@@ -242,7 +263,106 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V3.5 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
+
+  <section id="g" class="panel"><div class="card">
+    <h2>Glue Flow</h2>
+    <div class="help">Operator กรอกค่าที่วัดจริง ระบบคำนวณ Glue % ให้อัตโนมัติ • ค่า Reference time และ Container volume เปลี่ยนได้เฉพาะ Admin</div>
+
+    <div class="admin-bar">
+      <span id="g_admin_badge" class="admin-badge admin-locked">View / Operator mode</span>
+      <button id="g_admin_login_btn" class="btn secondary" type="button" onclick="adminLogin()">Admin Login</button>
+      <button id="g_admin_logout_btn" class="btn secondary admin-hidden" type="button" onclick="adminLogout()">Lock</button>
+    </div>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:10px 0">
+      <span class="readonly-setting">Reference time: <strong id="g_ref_view">60</strong> sec</span>
+      <span class="readonly-setting">Container volume: <strong id="g_vol_view">10</strong> L</span>
+    </div>
+
+    <div id="g_admin_settings" class="settings-box admin-hidden">
+      <strong>Admin Settings</strong>
+      <div class="settings-row" style="margin-top:10px">
+        <div><label>Reference time</label><div class="iw"><input id="g_ref_set" inputmode="decimal" type="number" step="any"><span class="unit">sec</span></div></div>
+        <div><label>Container volume</label><div class="iw"><input id="g_vol_set" inputmode="decimal" type="number" step="any"><span class="unit">L</span></div></div>
+        <div><button class="btn primary" type="button" onclick="saveGlueSettings()">Save Settings</button></div>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div><label>Date</label><div class="iw"><input id="g_date" type="date"></div></div>
+      <div><label>Shift</label><div class="iw"><input id="g_shift" type="text" placeholder="เช่น A / B / C หรือ 1 / 2 / 3"></div></div>
+      <div><label>Solid</label><div class="iw"><input id="g_solid" inputmode="decimal" type="number" step="any"><span class="unit">%</span></div></div>
+      <div><label>Density</label><div class="iw"><input id="g_density" inputmode="decimal" type="number" step="any"><span class="unit">g/ml</span></div></div>
+      <div><label>Fiber Screw</label><div class="iw"><input id="g_fiber" inputmode="decimal" type="number" step="any"><span class="unit">kg/min</span></div></div>
+      <div><label>Actual capture time</label><div class="iw"><input id="g_actual" inputmode="decimal" type="number" step="any"><span class="unit">sec</span></div></div>
+      <div><label>Glue Set</label><div class="iw"><input id="g_set" inputmode="decimal" type="number" step="any"><span class="unit">%</span></div></div>
+    </div>
+
+    <div class="buttons">
+      <button class="btn primary" type="button" onclick="calculateGlue()">Calculate</button>
+      <button class="btn secondary" type="button" onclick="saveGlueRecord()">Save Shift Record</button>
+      <button class="btn secondary" type="button" onclick="clearGlue()">Clear</button>
+      <button class="btn secondary" type="button" onclick="exampleGlue()">Example</button>
+    </div>
+
+    <div class="calc-result-grid">
+      <div class="result-box"><div class="k">Wet glue flow</div><div class="v" id="g_wet_out">-</div><div>kg/min</div></div>
+      <div class="result-box"><div class="k">Glue solid flow</div><div class="v" id="g_dry_out">-</div><div>kg/min</div></div>
+      <div class="result-box highlight"><div class="k">Glue result</div><div class="v" id="g_pct_out">-</div><div>%</div></div>
+      <div class="result-box"><div class="k">Diff from set</div><div class="v" id="g_diff_out">-</div><div>% point</div></div>
+    </div>
+    <div id="g_status" class="status">พร้อมคำนวณ</div>
+    <div class="formula">Glue % = [(Container L × Density × Reference sec ÷ Actual sec) × Solid%] ÷ Fiber Screw × 100</div>
+
+    <h3 style="margin-top:20px">Shift Records (this device)</h3>
+    <div class="shift-table-wrap"><table class="shift-table">
+      <thead><tr><th>Date</th><th>Shift</th><th>Solid %</th><th>Density</th><th>Fiber kg/min</th><th>Actual sec</th><th>Glue Set %</th><th>Glue %</th><th>Diff</th><th>Action</th></tr></thead>
+      <tbody id="g_record_body"></tbody>
+    </table></div>
+  </div></section>
+
+  <section id="s" class="panel"><div class="card">
+    <h2>Sifter</h2>
+    <div class="help">คำนวณ Fiber drop จาก Sifter 1 + Sifter 2 เทียบกับ Refiner production • Press performance และ SEC Set เก็บเป็นข้อมูลประกอบรายงาน</div>
+
+    <div class="grid">
+      <div><label>Date</label><div class="iw"><input id="s_date" type="date"></div></div>
+      <div><label>Shift</label><div class="iw"><input id="s_shift" type="text" placeholder="เช่น A / B / C หรือ 1 / 2 / 3"></div></div>
+      <div><label>Refiner production</label><div class="iw"><input id="s_refiner" inputmode="decimal" type="number" step="any"><span class="unit">t/hr</span></div></div>
+      <div><label>Press performance</label><div class="iw"><input id="s_press" inputmode="decimal" type="number" step="any"><span class="unit">m³/hr</span></div></div>
+      <div><label>Sifter 1</label><div class="iw"><input id="s_1" inputmode="decimal" type="number" step="any"><span class="unit">kg/min</span></div></div>
+      <div><label>Sifter 2</label><div class="iw"><input id="s_2" inputmode="decimal" type="number" step="any"><span class="unit">kg/min</span></div></div>
+      <div><label>SEC Set</label><div class="iw"><input id="s_sec" inputmode="decimal" type="number" step="any"><span class="unit">kWh/t</span></div></div>
+    </div>
+
+    <div class="buttons">
+      <button class="btn primary" type="button" onclick="calculateSifter()">Calculate</button>
+      <button class="btn secondary" type="button" onclick="saveSifterRecord()">Save Shift Record</button>
+      <button class="btn secondary" type="button" onclick="clearSifter()">Clear</button>
+      <button class="btn secondary" type="button" onclick="exampleSifter()">Example</button>
+    </div>
+
+    <div class="calc-result-grid">
+      <div class="result-box"><div class="k">Sifter 1</div><div class="v" id="s1_hr_out">-</div><div>kg/hr</div></div>
+      <div class="result-box"><div class="k">Sifter 2</div><div class="v" id="s2_hr_out">-</div><div>kg/hr</div></div>
+      <div class="result-box"><div class="k">Total drop</div><div class="v" id="s_total_out">-</div><div>t/hr</div></div>
+      <div class="result-box highlight"><div class="k">Sifter result</div><div class="v" id="s_pct_out">-</div><div>%</div></div>
+    </div>
+    <div id="s_status" class="status">พร้อมคำนวณ</div>
+    <div class="formula">
+      Sifter kg/hr = kg/min × 60<br>
+      Total t/hr = (Sifter 1 kg/hr + Sifter 2 kg/hr) ÷ 1000<br>
+      Sifter % = Total t/hr ÷ Refiner t/hr × 100
+    </div>
+
+    <h3 style="margin-top:20px">Shift Records (this device)</h3>
+    <div class="shift-table-wrap"><table class="shift-table">
+      <thead><tr><th>Date</th><th>Shift</th><th>Refiner t/hr</th><th>Press m³/hr</th><th>Sifter 1 kg/min</th><th>Sifter 2 kg/min</th><th>Total t/hr</th><th>Sifter %</th><th>SEC Set</th><th>Action</th></tr></thead>
+      <tbody id="s_record_body"></tbody>
+    </table></div>
+  </div></section>
+
+  <div class="footer">V3.6 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
 </div>
 
 <script>
@@ -377,31 +497,49 @@ async function adminLogin(){
   sessionStorage.setItem(ADMIN_SESSION_KEY,String(Date.now()+ADMIN_MINUTES*60*1000));
   updateAdminUI();
   renderRefiner();
-  status('r',`Admin mode เปิดใช้งาน ${ADMIN_MINUTES} นาที`,'good');
+  if($('g_record_body'))renderGlueRecords();
+  if($('s_record_body'))renderSifterRecords();
+  if($('r_status'))status('r',`Admin mode เปิดใช้งาน ${ADMIN_MINUTES} นาที`,'good');
+  if($('g_status'))status('g',`Admin mode เปิดใช้งาน ${ADMIN_MINUTES} นาที`,'good');
 }
 function adminLogout(){
   sessionStorage.removeItem(ADMIN_SESSION_KEY);
   refinerEditId=null;
   updateAdminUI();
   renderRefiner();
-  status('r','ล็อกแล้ว • View only');
+  if($('g_record_body'))renderGlueRecords();
+  if($('s_record_body'))renderSifterRecords();
+  if($('r_status'))status('r','ล็อกแล้ว • View only');
+  if($('g_status'))status('g','Admin settings ถูกล็อกแล้ว');
 }
 function updateAdminUI(){
   const on=adminActive();
   const badge=$('admin_badge'), login=$('admin_login_btn'), logout=$('admin_logout_btn');
   const add=$('new_record_btn'), form=$('r_form');
-  if(!badge)return;
-  badge.textContent=on?'Admin mode':'View only';
-  badge.className='admin-badge '+(on?'admin-unlocked':'admin-locked');
-  login.classList.toggle('admin-hidden',on);
-  logout.classList.toggle('admin-hidden',!on);
-  add.classList.toggle('admin-hidden',!on);
-  form.classList.toggle('admin-hidden',!on);
+  if(badge){
+    badge.textContent=on?'Admin mode':'View only';
+    badge.className='admin-badge '+(on?'admin-unlocked':'admin-locked');
+    login.classList.toggle('admin-hidden',on);
+    logout.classList.toggle('admin-hidden',!on);
+    add.classList.toggle('admin-hidden',!on);
+    form.classList.toggle('admin-hidden',!on);
+  }
+  const gb=$('g_admin_badge'), gl=$('g_admin_login_btn'), go=$('g_admin_logout_btn'), gs=$('g_admin_settings');
+  if(gb){
+    gb.textContent=on?'Admin mode':'View / Operator mode';
+    gb.className='admin-badge '+(on?'admin-unlocked':'admin-locked');
+    gl.classList.toggle('admin-hidden',on);
+    go.classList.toggle('admin-hidden',!on);
+    gs.classList.toggle('admin-hidden',!on);
+  }
+  if(typeof syncGlueSettings==='function')syncGlueSettings();
 }
 setInterval(()=>{
   if(!adminActive()){
     updateAdminUI();
     if($('r_body'))renderRefiner();
+    if($('g_record_body'))renderGlueRecords();
+    if($('s_record_body'))renderSifterRecords();
   }
 },30000);
 
@@ -530,18 +668,178 @@ function exportRefinerCSV(){
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Refiner_Plate_Record.csv';a.click();URL.revokeObjectURL(a.href);
 }
 
+
+// ---------- Glue Flow ----------
+const GLUE_SETTINGS_KEY='production_cal_glue_settings_v1';
+const GLUE_RECORD_KEY='production_cal_glue_records_v1';
+function loadGlueSettings(){
+  try{
+    const x=JSON.parse(localStorage.getItem(GLUE_SETTINGS_KEY)||'null');
+    if(x && Number(x.refSec)>0 && Number(x.volumeL)>0)return {refSec:Number(x.refSec),volumeL:Number(x.volumeL)};
+  }catch(e){}
+  const d={refSec:60,volumeL:10};
+  localStorage.setItem(GLUE_SETTINGS_KEY,JSON.stringify(d));
+  return d;
+}
+function syncGlueSettings(){
+  const x=loadGlueSettings();
+  if($('g_ref_view'))$('g_ref_view').textContent=String(x.refSec);
+  if($('g_vol_view'))$('g_vol_view').textContent=String(x.volumeL);
+  if($('g_ref_set'))$('g_ref_set').value=x.refSec;
+  if($('g_vol_set'))$('g_vol_set').value=x.volumeL;
+}
+function saveGlueSettings(){
+  if(!requireAdmin())return;
+  const ref=Number($('g_ref_set').value), vol=Number($('g_vol_set').value);
+  if(!(ref>0) || !(vol>0)){status('g','Reference time และ Container volume ต้องมากกว่า 0','warn');return}
+  localStorage.setItem(GLUE_SETTINGS_KEY,JSON.stringify({refSec:ref,volumeL:vol}));
+  syncGlueSettings();
+  status('g',`บันทึก Admin Settings แล้ว: ${ref} sec / ${vol} L`,'good');
+}
+function glueInputs(){
+  return {
+    solid:Number($('g_solid').value), density:Number($('g_density').value),
+    fiber:Number($('g_fiber').value), actual:Number($('g_actual').value),
+    set:$('g_set').value===''?null:Number($('g_set').value)
+  };
+}
+function glueCalc(){
+  const a=glueInputs(), cfg=loadGlueSettings();
+  if(!(a.solid>0)||!(a.density>0)||!(a.fiber>0)||!(a.actual>0))return null;
+  const wet=cfg.volumeL*a.density*cfg.refSec/a.actual;
+  const dry=wet*(a.solid/100);
+  const pct=dry/a.fiber*100;
+  const diff=a.set===null?null:pct-a.set;
+  return {...a,...cfg,wet,dry,pct,diff};
+}
+function calculateGlue(){
+  const r=glueCalc();
+  if(!r){status('g','กรุณากรอก Solid, Density, Fiber Screw และ Actual capture time ให้ครบและมากกว่า 0','warn');return null}
+  $('g_wet_out').textContent=r.wet.toFixed(2);
+  $('g_dry_out').textContent=r.dry.toFixed(2);
+  $('g_pct_out').textContent=r.pct.toFixed(2);
+  $('g_diff_out').textContent=r.diff===null?'-':(r.diff>=0?'+':'')+r.diff.toFixed(2);
+  status('g',`Glue Flow = ${r.pct.toFixed(2)}%`,'good');
+  return r;
+}
+function clearGlue(){
+  ['g_shift','g_solid','g_density','g_fiber','g_actual','g_set'].forEach(id=>$(id).value='');
+  ['g_wet_out','g_dry_out','g_pct_out','g_diff_out'].forEach(id=>$(id).textContent='-');
+  if($('g_date'))$('g_date').value=new Date().toISOString().slice(0,10);
+  status('g','พร้อมคำนวณ');
+}
+function exampleGlue(){
+  clearGlue();
+  $('g_solid').value=63.58;$('g_density').value=1.28;$('g_fiber').value=597.6;$('g_actual').value=13.40;$('g_set').value=6.00;
+  calculateGlue();
+}
+function loadGlueRecords(){try{const x=JSON.parse(localStorage.getItem(GLUE_RECORD_KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
+function saveGlueRecord(){
+  const r=calculateGlue(); if(!r)return;
+  const date=$('g_date').value||new Date().toISOString().slice(0,10), shift=$('g_shift').value.trim()||'-';
+  const data=loadGlueRecords();
+  data.unshift({id:'g-'+Date.now(),date,shift,solid:r.solid,density:r.density,fiber:r.fiber,actual:r.actual,set:r.set,pct:r.pct,diff:r.diff,refSec:r.refSec,volumeL:r.volumeL});
+  localStorage.setItem(GLUE_RECORD_KEY,JSON.stringify(data.slice(0,200)));
+  renderGlueRecords(); status('g','บันทึก Glue Flow ของกะนี้แล้ว','good');
+}
+function deleteGlueRecord(id){
+  if(!requireAdmin())return;
+  if(!confirm('Delete Glue Flow record ?'))return;
+  localStorage.setItem(GLUE_RECORD_KEY,JSON.stringify(loadGlueRecords().filter(x=>x.id!==id)));
+  renderGlueRecords();
+}
+function renderGlueRecords(){
+  if(!$('g_record_body'))return;
+  const rows=loadGlueRecords().slice(0,30);
+  $('g_record_body').innerHTML=rows.length?rows.map(x=>`<tr>
+    <td>${rDate(x.date)}</td><td>${x.shift||'-'}</td><td>${rNum(x.solid,2)}</td><td>${rNum(x.density,2)}</td>
+    <td>${rNum(x.fiber,1)}</td><td>${rNum(x.actual,2)}</td><td>${x.set===null?'-':rNum(x.set,2)}</td>
+    <td><strong>${rNum(x.pct,2)}</strong></td><td>${x.diff===null?'-':((x.diff>=0?'+':'')+Number(x.diff).toFixed(2))}</td>
+    <td>${adminActive()?`<button class="mini-btn danger" onclick="deleteGlueRecord('${x.id}')">Delete</button>`:'-'}</td>
+  </tr>`).join(''):'<tr><td colspan="10">ยังไม่มี Shift Record</td></tr>';
+}
+
+// ---------- Sifter ----------
+const SIFTER_RECORD_KEY='production_cal_sifter_records_v1';
+function sifterInputs(){
+  return {
+    refiner:Number($('s_refiner').value),press:$('s_press').value===''?null:Number($('s_press').value),
+    s1:Number($('s_1').value),s2:Number($('s_2').value),sec:$('s_sec').value===''?null:Number($('s_sec').value)
+  };
+}
+function sifterCalc(){
+  const a=sifterInputs();
+  if(!(a.refiner>0)||!(a.s1>=0)||!(a.s2>=0) || $('s_1').value==='' || $('s_2').value==='')return null;
+  const h1=a.s1*60,h2=a.s2*60,total=(h1+h2)/1000,pct=total/a.refiner*100;
+  return {...a,h1,h2,total,pct};
+}
+function calculateSifter(){
+  const r=sifterCalc();
+  if(!r){status('s','กรุณากรอก Refiner production, Sifter 1 และ Sifter 2 ให้ครบ','warn');return null}
+  $('s1_hr_out').textContent=r.h1.toFixed(3);
+  $('s2_hr_out').textContent=r.h2.toFixed(3);
+  $('s_total_out').textContent=r.total.toFixed(5);
+  $('s_pct_out').textContent=r.pct.toFixed(2);
+  status('s',`Sifter = ${r.pct.toFixed(2)}%`,'good');
+  return r;
+}
+function clearSifter(){
+  ['s_shift','s_refiner','s_press','s_1','s_2','s_sec'].forEach(id=>$(id).value='');
+  ['s1_hr_out','s2_hr_out','s_total_out','s_pct_out'].forEach(id=>$(id).textContent='-');
+  if($('s_date'))$('s_date').value=new Date().toISOString().slice(0,10);
+  status('s','พร้อมคำนวณ');
+}
+function exampleSifter(){
+  clearSifter();
+  $('s_refiner').value=32.30;$('s_press').value=45.18;$('s_1').value=0.747;$('s_2').value=0.916;$('s_sec').value=88;
+  calculateSifter();
+}
+function loadSifterRecords(){try{const x=JSON.parse(localStorage.getItem(SIFTER_RECORD_KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
+function saveSifterRecord(){
+  const r=calculateSifter(); if(!r)return;
+  const date=$('s_date').value||new Date().toISOString().slice(0,10), shift=$('s_shift').value.trim()||'-';
+  const data=loadSifterRecords();
+  data.unshift({id:'s-'+Date.now(),date,shift,refiner:r.refiner,press:r.press,s1:r.s1,s2:r.s2,total:r.total,pct:r.pct,sec:r.sec});
+  localStorage.setItem(SIFTER_RECORD_KEY,JSON.stringify(data.slice(0,200)));
+  renderSifterRecords(); status('s','บันทึก Sifter ของกะนี้แล้ว','good');
+}
+function deleteSifterRecord(id){
+  if(!requireAdmin())return;
+  if(!confirm('Delete Sifter record ?'))return;
+  localStorage.setItem(SIFTER_RECORD_KEY,JSON.stringify(loadSifterRecords().filter(x=>x.id!==id)));
+  renderSifterRecords();
+}
+function renderSifterRecords(){
+  if(!$('s_record_body'))return;
+  const rows=loadSifterRecords().slice(0,30);
+  $('s_record_body').innerHTML=rows.length?rows.map(x=>`<tr>
+    <td>${rDate(x.date)}</td><td>${x.shift||'-'}</td><td>${rNum(x.refiner,2)}</td><td>${x.press===null?'-':rNum(x.press,2)}</td>
+    <td>${rNum(x.s1,3)}</td><td>${rNum(x.s2,3)}</td><td>${rNum(x.total,5)}</td><td><strong>${rNum(x.pct,2)}</strong></td>
+    <td>${x.sec===null?'-':rNum(x.sec,1)}</td>
+    <td>${adminActive()?`<button class="mini-btn danger" onclick="deleteSifterRecord('${x.id}')">Delete</button>`:'-'}</td>
+  </tr>`).join(''):'<tr><td colspan="10">ยังไม่มี Shift Record</td></tr>';
+}
+
+
 document.querySelectorAll('.tab').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.panel').forEach(x=>x.classList.remove('active'));
     b.classList.add('active');
     $(b.dataset.tab).classList.add('active');
+    if(b.dataset.tab==='g'){syncGlueSettings();renderGlueRecords();}
+    if(b.dataset.tab==='s'){renderSifterRecords();}
   });
 });
 
 refreshRefinerYears();
+if($('g_date'))$('g_date').value=new Date().toISOString().slice(0,10);
+if($('s_date'))$('s_date').value=new Date().toISOString().slice(0,10);
+syncGlueSettings();
 updateAdminUI();
 renderRefiner();
+renderGlueRecords();
+renderSifterRecords();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
