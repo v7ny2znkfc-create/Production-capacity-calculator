@@ -82,6 +82,13 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 .record-form select{width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff}
 .record-note{font-size:12px;color:#64748b;margin-top:8px;line-height:1.5}
 .set-badge{display:inline-block;padding:4px 8px;border-radius:999px;background:#e0f2fe;color:#075985;font-weight:900;white-space:nowrap}
+
+.admin-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0 4px}
+.admin-badge{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:900}
+.admin-locked{background:#f1f5f9;color:#475569;border:1px solid #cbd5e1}
+.admin-unlocked{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0}
+.admin-hidden{display:none!important}
+
 .footer{text-align:center;color:#64748b;font-size:12px;margin:15px 0 4px}
 @media(max-width:760px){
   .tabs{grid-template-columns:repeat(2,1fr)}
@@ -96,7 +103,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner Record</p>
-    <div class="version">V3.4 PWA</div>
+    <div class="version">V3.5 PWA</div>
   </div>
 
   <div class="tabs">
@@ -185,16 +192,22 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 
   <section id="r" class="panel"><div class="card">
     <h2>Refiner Plate Record</h2>
-    <div class="help">บันทึกประวัติการเปลี่ยน Refiner plate แยกเป็นชุดตามปี เช่น Set 1/2027, Set 2/2027 โดยระบบกำหนดเลขชุดให้อัตโนมัติ</div>
+    <div class="help">ทุกคนสามารถดู Refiner Plate Record ได้ แต่การเพิ่ม แก้ไข หรือลบข้อมูลต้องเข้า Admin mode ก่อน</div>
+
+    <div class="admin-bar">
+      <span id="admin_badge" class="admin-badge admin-locked">View only</span>
+      <button id="admin_login_btn" class="btn secondary" type="button" onclick="adminLogin()">Admin Login</button>
+      <button id="admin_logout_btn" class="btn secondary admin-hidden" type="button" onclick="adminLogout()">Lock</button>
+    </div>
 
     <div class="record-toolbar">
       <label style="margin:0">Year</label>
       <select id="r_year" onchange="renderRefiner()"></select>
-      <button class="btn secondary" type="button" onclick="newRefinerRecord()">+ New Record</button>
+      <button id="new_record_btn" class="btn secondary admin-hidden" type="button" onclick="newRefinerRecord()">+ New Record</button>
       <button class="btn secondary" type="button" onclick="exportRefinerCSV()">Export CSV</button>
     </div>
 
-    <div class="record-form" id="r_form">
+    <div class="record-form admin-hidden" id="r_form">
       <h3 id="r_form_title">Add Refiner Plate Record</h3>
       <div class="grid">
         <div><label>Date changed</label><div class="iw"><input id="r_change" type="date"></div></div>
@@ -229,7 +242,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V3.4 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
+  <div class="footer">V3.5 • ใช้งานผ่าน GitHub Pages และรองรับ PWA</div>
 </div>
 
 <script>
@@ -330,6 +343,68 @@ function exP(){clearG('p');$('p_t').value=12.8;$('p_sp').value=320;solveP()}
 function exT(){clearG('t');$('t_vol').value=1000;$('t_cap').value=50;solveT()}
 
 
+
+// ---------- Admin Lock ----------
+const ADMIN_PIN_HASH='4d8d323236e5bbcd34dbeae67f1467b779194cffa918c6fc663a93839800db9b';
+const ADMIN_SESSION_KEY='production_cal_admin_until_v1';
+const ADMIN_MINUTES=15;
+
+async function sha256Text(text){
+  const data=new TextEncoder().encode(text);
+  const hash=await crypto.subtle.digest('SHA-256',data);
+  return Array.from(new Uint8Array(hash)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+function adminActive(){
+  const until=Number(sessionStorage.getItem(ADMIN_SESSION_KEY)||0);
+  if(until && Date.now()<until)return true;
+  if(until)sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  return false;
+}
+function requireAdmin(){
+  if(adminActive())return true;
+  alert('View only: กรุณาเข้า Admin mode ก่อนแก้ไขข้อมูล');
+  updateAdminUI();
+  return false;
+}
+async function adminLogin(){
+  const pin=prompt('Admin PIN');
+  if(pin===null)return;
+  const hash=await sha256Text(pin.trim());
+  if(hash!==ADMIN_PIN_HASH){
+    alert('PIN ไม่ถูกต้อง');
+    return;
+  }
+  sessionStorage.setItem(ADMIN_SESSION_KEY,String(Date.now()+ADMIN_MINUTES*60*1000));
+  updateAdminUI();
+  renderRefiner();
+  status('r',`Admin mode เปิดใช้งาน ${ADMIN_MINUTES} นาที`,'good');
+}
+function adminLogout(){
+  sessionStorage.removeItem(ADMIN_SESSION_KEY);
+  refinerEditId=null;
+  updateAdminUI();
+  renderRefiner();
+  status('r','ล็อกแล้ว • View only');
+}
+function updateAdminUI(){
+  const on=adminActive();
+  const badge=$('admin_badge'), login=$('admin_login_btn'), logout=$('admin_logout_btn');
+  const add=$('new_record_btn'), form=$('r_form');
+  if(!badge)return;
+  badge.textContent=on?'Admin mode':'View only';
+  badge.className='admin-badge '+(on?'admin-unlocked':'admin-locked');
+  login.classList.toggle('admin-hidden',on);
+  logout.classList.toggle('admin-hidden',!on);
+  add.classList.toggle('admin-hidden',!on);
+  form.classList.toggle('admin-hidden',!on);
+}
+setInterval(()=>{
+  if(!adminActive()){
+    updateAdminUI();
+    if($('r_body'))renderRefiner();
+  }
+},30000);
+
 // ---------- Refiner Plate Record ----------
 const REFINER_KEY='production_cal_refiner_records_v1';
 let refinerEditId=null;
@@ -384,7 +459,9 @@ function renderRefiner(){
       <td>${rNum(x.prod)}</td><td>${rNum(x.hours,1)}</td><td>${daysText}</td>
       <td>${x.ps||'-'}</td><td>${x.pr||'-'}</td><td>${x.cs||'-'}</td><td>${x.cr||'-'}</td>
       <td class="left">${x.bolt||'-'}</td><td>${rNum(x.sec,1)}</td>
-      <td><div class="record-actions"><button class="mini-btn" onclick="editRefiner('${x.id}')">Edit</button><button class="mini-btn danger" onclick="deleteRefiner('${x.id}')">Delete</button></div></td>
+      <td>${adminActive()
+        ? `<div class="record-actions"><button class="mini-btn" onclick="editRefiner('${x.id}')">Edit</button><button class="mini-btn danger" onclick="deleteRefiner('${x.id}')">Delete</button></div>`
+        : '<span style="color:#64748b;font-size:12px;font-weight:700">View only</span>'}</td>
     </tr>`
   }).join(''):`<tr><td colspan="13">ยังไม่มีข้อมูลปี ${year}</td></tr>`;
 }
@@ -394,9 +471,15 @@ function clearRefinerForm(){
   $('r_form_title').textContent='Add Refiner Plate Record';
   status('r','พร้อมบันทึกข้อมูล');
 }
-function newRefinerRecord(){clearRefinerForm();$('r_change').value=`${$('r_year').value}-01-01`; $('r_change').focus();}
+function newRefinerRecord(){
+  if(!requireAdmin())return;
+  clearRefinerForm();
+  $('r_change').value=`${$('r_year').value}-01-01`;
+  $('r_change').focus();
+}
 function nextSetNo(data,year){return Math.max(0,...data.filter(x=>rYearOf(x)===year).map(x=>Number(x.setNo)||0))+1}
 function saveRefinerRecord(){
+  if(!requireAdmin())return;
   const change=$('r_change').value, remove=$('r_remove').value;
   if(!change){status('r','กรุณาระบุ Date changed','warn');return}
   if(remove && new Date(remove)<new Date(change)){status('r','Date removed ต้องไม่ก่อน Date changed','warn');return}
@@ -419,6 +502,7 @@ function saveRefinerRecord(){
   clearRefinerForm(); status('r',`บันทึก Set ${obj.setNo}/${year} เรียบร้อย`,'good');
 }
 function editRefiner(id){
+  if(!requireAdmin())return;
   const x=loadRefiner().find(a=>a.id===id); if(!x)return;
   refinerEditId=id;
   $('r_change').value=x.change||'';$('r_remove').value=x.remove||'';$('r_prod').value=x.prod??'';$('r_hours').value=x.hours??'';
@@ -429,6 +513,7 @@ function editRefiner(id){
   $('r_form').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function deleteRefiner(id){
+  if(!requireAdmin())return;
   const data=loadRefiner(), x=data.find(a=>a.id===id); if(!x)return;
   if(!confirm(`Delete Set ${x.setNo}/${rYearOf(x)} ?`))return;
   saveRefinerData(data.filter(a=>a.id!==id)); renderRefiner(); clearRefinerForm();
@@ -455,6 +540,7 @@ document.querySelectorAll('.tab').forEach(b=>{
 });
 
 refreshRefinerYears();
+updateAdminUI();
 renderRefiner();
 
 if('serviceWorker' in navigator){
