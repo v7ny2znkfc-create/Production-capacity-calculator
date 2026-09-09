@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V4.4 PWA</div>
+    <div class="version">V4.5 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -186,6 +186,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <button class="tab" data-tab="s">7. Sifter</button>
     <button class="tab" data-tab="rec">8. Recipe</button>
     <button class="tab" data-tab="d">9. Daily Report</button>
+    <button class="tab" data-tab="gt">10. Glue Tank</button>
   </div>
 
   <section id="h" class="panel active"><div class="card">
@@ -240,6 +241,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <button class="home-link" onclick="goPage('c')"><strong>Capacity</strong><span>Capacity / Speed</span></button>
       <button class="home-link" onclick="goPage('p')"><strong>Press Factor</strong><span>Press length 28.41 m</span></button>
       <button class="home-link" onclick="goPage('t')"><strong>Production Time</strong><span>Target / Capacity / Time</span></button>
+      <button class="home-link" onclick="goPage('gt')"><strong>Glue Tank</strong><span>Tank quantity & remaining time</span></button>
     </div>
 
     <div class="home-section-title">Equipment & Standard</div>
@@ -552,6 +554,41 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   </div></section>
 
 
+
+  <section id="gt" class="panel"><div class="card">
+    <h2>Glue Tank Calculator</h2>
+    <div class="help">คำนวณปริมาณกาวคงเหลือในถัง และเวลาที่คาดว่าจะใช้ได้จนหมด โดยกำหนดความจุถัง 100% = 85 ton</div>
+
+    <div class="grid">
+      <div>
+        <label>Tank Level (%)</label>
+        <input id="gt_level" type="number" step="any" min="0" max="100" placeholder="เช่น 65" oninput="calcGlueTank()">
+      </div>
+      <div>
+        <label>Glue Flow (kg/min)</label>
+        <input id="gt_flow" type="number" step="any" min="0" placeholder="เช่น 500" oninput="calcGlueTank()">
+      </div>
+    </div>
+
+    <div class="result-grid" style="margin-top:18px">
+      <div class="result-card">
+        <span>Glue Remaining</span>
+        <strong id="gt_ton">- ton</strong>
+      </div>
+      <div class="result-card">
+        <span>Glue Remaining</span>
+        <strong id="gt_kg">- kg</strong>
+      </div>
+      <div class="result-card">
+        <span>Estimated Time Remaining</span>
+        <strong id="gt_min">- min</strong>
+        <small id="gt_hr" style="display:block;margin-top:6px;color:#718096">-</small>
+      </div>
+    </div>
+
+    <div id="gt_status" class="status">กรอก Tank Level และ Glue Flow เพื่อคำนวณ</div>
+  </div></section>
+
   <section id="d" class="panel"><div class="card">
     <h2>Daily Report</h2>
     <div class="help">กรอกข้อมูลประจำวัน โดย PD1 Yesterday Running จะคำนวณ m³ จากจำนวนแผ่นอัตโนมัติ และ Major DT จะรวมเวลาให้อัตโนมัติ</div>
@@ -614,7 +651,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V4.4 • Production Dashboard • Daily Report</div>
+  <div class="footer">V4.5 • Production Dashboard • Glue Tank Calculator</div>
 </div>
 
 <script>
@@ -1229,6 +1266,7 @@ function goPage(id){
   if(id==='r')renderRefiner();
   if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
   if(id==='d')initDailyReport();
+  if(id==='gt')calcGlueTank();
   if(id==='h')refreshHomeDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1421,6 +1459,44 @@ function reportImageBlob(){return new Promise(r=>makeDailyReportCanvas().toBlob(
 function saveBlob(b,n){let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
 async function saveDailyReportImage(){let b=await reportImageBlob();saveBlob(b,'Daily_Report_'+($('d_date').value||'report')+'.png');$('d_status').textContent='Saved Daily Report PNG ✓'}
 async function shareDailyReportImage(){let b=await reportImageBlob(),n='Daily_Report_'+($('d_date').value||'report')+'.png',f=new File([b],n,{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({title:'Daily Production Report',files:[f]});$('d_status').textContent='Shared Daily Report image ✓';return}}catch(e){if(e.name==='AbortError')return}saveBlob(b,n);$('d_status').textContent='Share file not supported — PNG saved instead'}
+
+
+// ---------- Glue Tank Calculator ----------
+function calcGlueTank(){
+  const level = parseFloat($('gt_level')?.value);
+  const flow = parseFloat($('gt_flow')?.value);
+  const tonEl = $('gt_ton'), kgEl = $('gt_kg'), minEl = $('gt_min'), hrEl = $('gt_hr'), st = $('gt_status');
+  if(!tonEl) return;
+
+  if(!Number.isFinite(level) || level < 0 || level > 100){
+    tonEl.textContent='- ton'; kgEl.textContent='- kg'; minEl.textContent='- min'; hrEl.textContent='-';
+    if(st) st.textContent='Tank Level ต้องอยู่ระหว่าง 0–100%';
+    return;
+  }
+
+  const kg = level * 850;
+  const ton = kg / 1000;
+  tonEl.textContent = ton.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}) + ' ton';
+  kgEl.textContent = kg.toLocaleString(undefined,{maximumFractionDigits:0}) + ' kg';
+
+  if(!Number.isFinite(flow) || flow <= 0){
+    minEl.textContent='- min'; hrEl.textContent='กรอก Glue Flow มากกว่า 0 kg/min';
+    if(st) st.textContent='คำนวณปริมาณกาวแล้ว — รอค่า Glue Flow';
+    return;
+  }
+
+  const mins = kg / flow;
+  const hrs = Math.floor(mins / 60);
+  const rem = Math.round(mins % 60);
+  minEl.textContent = mins.toLocaleString(undefined,{minimumFractionDigits:1,maximumFractionDigits:1}) + ' min';
+  hrEl.textContent = hrs > 0 ? `${hrs} hr ${rem} min` : `${Math.round(mins)} min`;
+
+  if(st){
+    if(mins < 30){ st.className='status bad'; st.textContent='Warning: กาวเหลือน้อยกว่า 30 นาที'; }
+    else if(mins <= 60){ st.className='status warn'; st.textContent='Warning: กาวเหลือประมาณ 30–60 นาที'; }
+    else { st.className='status good'; st.textContent='Glue tank remaining time > 60 min'; }
+  }
+}
 
 </script>
 </body></html>
