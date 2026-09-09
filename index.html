@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V4.3.1 PWA</div>
+    <div class="version">V4.4 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -606,13 +606,15 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <textarea id="d_remark" style="width:100%;min-height:90px;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit"></textarea>
     <div class="buttons">
       <button class="btn primary" type="button" onclick="saveDailyReport()">Save Daily Report</button>
+      <button class="btn primary" type="button" onclick="shareDailyReportImage()">Share as Image</button>
+      <button class="btn secondary" type="button" onclick="saveDailyReportImage()">Save PNG</button>
       <button class="btn secondary" type="button" onclick="copyDailyReport()">Copy Report Text</button>
       <button class="btn secondary" type="button" onclick="newDailyReport()">New / Clear</button>
     </div>
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V4.3.1 • Production Dashboard • Daily Report</div>
+  <div class="footer">V4.4 • Production Dashboard • Daily Report</div>
 </div>
 
 <script>
@@ -1389,6 +1391,36 @@ function buildDailyText(){
 async function copyDailyReport(){
   const txt=buildDailyText(); try{await navigator.clipboard.writeText(txt);$('d_status').textContent='Copied Daily Report text ✓'}catch(e){prompt('Copy Daily Report',txt)}
 }
+
+
+// Daily Report PNG / Share
+function makeDailyReportCanvas(){
+ const W=1080,P=54,G=20, dt=[...document.querySelectorAll('#dt_rows .grid')],
+ runs=[...document.querySelectorAll('#run_rows tr')].filter(r=>[...r.querySelectorAll('input')].some(i=>i.value));
+ const sum=[['Log stock',$('d_log').value,'ton'],['Incoming Truck',$('d_incoming').value,''],['Waiting Truck',$('d_waiting').value,''],['Chipper',$('d_chipper').value,'ton'],['Chip Silo',$('d_silo').value,'%'],['Rubber on floor',$('d_rubber').value,'ton'],['PD1',$('d_pd1').value,'m³'],['PD1 MTD DT',$('d_mtd').value,'%'],['Sanding',$('d_sanding').value,'m³'],['CTS',$('d_cts').value,'m³'],['WIP [All]',$('d_wip').value,'m³'],['Wait for Grading',$('d_grading').value,'m³'],['Melamine line',$('d_melamine').value,'pcs']];
+ const seg=[['Running days',$('d_days').value,'day'],['Running Ton',$('d_ton').value,'ton'],['Average',$('d_avgton').value,'ton/h'],['Average SEC',$('d_avgsec').value,'kWh/t'],['SEC set now',$('d_secset').value,'kWh/t'],['Wear',$('d_wear').value,'mm'],['Digestor',$('d_digestor').value,'Bar'],['Refiner',$('d_refinerbar').value,'Bar'],['Cooking time',$('d_cooking').value,'min']];
+ const cardH=a=>58+Math.ceil(a.length/3)*68;
+ const H=178+cardH(sum)+G+cardH(seg)+G+92+Math.max(1,dt.length)*42+G+112+Math.max(1,runs.length)*46+(($('d_remark').value||'').trim()?130:0)+70;
+ const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
+ x.fillStyle='#f4f7fb';x.fillRect(0,0,W,H);x.fillStyle='#17324d';x.fillRect(0,0,W,150);
+ x.fillStyle='white';x.font='700 42px Arial';x.fillText('DAILY PRODUCTION REPORT',P,65);
+ let dv=$('d_date').value, ds=dv?new Date(dv+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}):'';
+ x.font='24px Arial';x.fillText(ds,P,108);x.textAlign='right';x.font='700 24px Arial';x.fillText('PD1  '+$('run_total').textContent+' m³',W-P,108);x.textAlign='left';
+ let y=178;
+ function card(y0,h0){x.fillStyle='white';x.beginPath();x.roundRect(P,y0,W-2*P,h0,18);x.fill()}
+ function section(title,a){let hh=cardH(a);card(y,hh);x.fillStyle='#17324d';x.font='700 25px Arial';x.fillText(title,P+24,y+38);let cw=(W-2*P-48)/3;a.forEach((v,i)=>{let xx=P+24+(i%3)*cw,yy=y+78+Math.floor(i/3)*68;x.fillStyle='#718096';x.font='18px Arial';x.fillText(v[0],xx,yy);x.fillStyle='#172b3a';x.font='700 25px Arial';x.fillText((v[1]||'-')+(v[2]?' '+v[2]:''),xx,yy+29)});y+=hh+G}
+ section('PRODUCTION SUMMARY',sum);section('SEGMENT',seg);
+ let dh=92+Math.max(1,dt.length)*42;card(y,dh);x.fillStyle='#17324d';x.font='700 25px Arial';x.fillText('PD1 YESTERDAY MAJOR DT',P+24,y+38);x.textAlign='right';x.fillStyle='#b42318';x.fillText('TOTAL '+$('dt_total_hr').textContent+' Hrs',W-P-24,y+38);x.textAlign='left';let yy=y+78;
+ dt.forEach(r=>{x.fillStyle='#263746';x.font='20px Arial';x.fillText(r.querySelector('.dt_name').value||'-',P+24,yy);x.textAlign='right';x.fillText((r.querySelector('.dt_count').value||0)+' x  •  '+(r.querySelector('.dt_min').value||0)+' min',W-P-24,yy);x.textAlign='left';yy+=42});y+=dh+G;
+ let rh=112+Math.max(1,runs.length)*46;card(y,rh);x.fillStyle='#17324d';x.font='700 25px Arial';x.fillText('PD1 YESTERDAY RUNNING',P+24,y+38);x.textAlign='right';x.fillStyle='#18794e';x.fillText('TOTAL '+$('run_total').textContent+' m³',W-P-24,y+38);x.textAlign='left';yy=y+78;x.fillStyle='#718096';x.font='700 17px Arial';x.fillText('PRODUCT',P+24,yy);x.fillText('SIZE (mm)',P+360,yy);x.fillText('PCS',P+680,yy);x.textAlign='right';x.fillText('VOLUME',W-P-24,yy);x.textAlign='left';yy+=36;
+ runs.forEach(r=>{let q=s=>r.querySelector(s).value;x.fillStyle='#263746';x.font='20px Arial';x.fillText(q('.rr_t')+' '+q('.rr_grade'),P+24,yy);x.fillText(q('.rr_w')+' × '+q('.rr_l'),P+360,yy);x.fillText(q('.rr_q')||'-',P+680,yy);x.textAlign='right';x.font='700 20px Arial';x.fillText(r.querySelector('.rr_vol').textContent+' m³',W-P-24,yy);x.textAlign='left';yy+=46});y+=rh+G;
+ let rem=($('d_remark').value||'').trim();if(rem){card(y,105);x.fillStyle='#17324d';x.font='700 23px Arial';x.fillText('REMARK',P+24,y+34);x.fillStyle='#263746';x.font='19px Arial';x.fillText(rem.slice(0,110),P+24,y+72)}
+ x.fillStyle='#718096';x.font='16px Arial';x.fillText('Generated by Production Capacity Calculator',P,H-28);return c
+}
+function reportImageBlob(){return new Promise(r=>makeDailyReportCanvas().toBlob(r,'image/png',.95))}
+function saveBlob(b,n){let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
+async function saveDailyReportImage(){let b=await reportImageBlob();saveBlob(b,'Daily_Report_'+($('d_date').value||'report')+'.png');$('d_status').textContent='Saved Daily Report PNG ✓'}
+async function shareDailyReportImage(){let b=await reportImageBlob(),n='Daily_Report_'+($('d_date').value||'report')+'.png',f=new File([b],n,{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({title:'Daily Production Report',files:[f]});$('d_status').textContent='Shared Daily Report image ✓';return}}catch(e){if(e.name==='AbortError')return}saveBlob(b,n);$('d_status').textContent='Share file not supported — PNG saved instead'}
 
 </script>
 </body></html>
