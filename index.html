@@ -24,7 +24,7 @@ body{
 .hero h1{margin:0 0 5px;font-size:clamp(25px,4vw,38px)}
 .hero p{margin:0;color:#cbd5e1}
 .version{margin-top:8px;font-size:12px;color:#94a3b8}
-.tabs{display:grid;grid-template-columns:repeat(8,1fr);gap:9px;margin-bottom:14px}
+.tabs{display:grid;grid-template-columns:repeat(9,1fr);gap:9px;margin-bottom:14px}
 .tab{
   background:#fff;border:1px solid #cbd5e1;padding:13px 8px;border-radius:12px;
   font-weight:800;cursor:pointer;color:#0f172a
@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V4.2 PWA</div>
+    <div class="version">V4.3 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -185,6 +185,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <button class="tab" data-tab="g">6. Glue Flow</button>
     <button class="tab" data-tab="s">7. Sifter</button>
     <button class="tab" data-tab="rec">8. Recipe</button>
+    <button class="tab" data-tab="d">9. Daily Report</button>
   </div>
 
   <section id="h" class="panel active"><div class="card">
@@ -245,6 +246,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="home-menu three">
       <button class="home-link" onclick="goPage('r')"><strong>Refiner Plate Record</strong><span>ประวัติ Plate และ SEC</span></button>
       <button class="home-link" onclick="goPage('rec')"><strong>Recipe Library</strong><span>Standard parameter by thickness</span></button>
+      <button class="home-link" onclick="goPage('d')"><strong>Daily Report</strong><span>PD1 running & Major DT</span></button>
     </div>
   </div></section>
 
@@ -549,7 +551,68 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V4.2 • Production Dashboard • Recipe Library</div>
+
+  <section id="d" class="panel"><div class="card">
+    <h2>Daily Report</h2>
+    <div class="help">กรอกข้อมูลประจำวัน โดย PD1 Yesterday Running จะคำนวณ m³ จากจำนวนแผ่นอัตโนมัติ และ Major DT จะรวมเวลาให้อัตโนมัติ</div>
+
+    <h3>Production Summary</h3>
+    <div class="grid">
+      <div><label>Report Date</label><input id="d_date" type="date"></div>
+      <div><label>Log stock (ton)</label><input id="d_log" type="number" step="any"></div>
+      <div><label>Incoming Truck</label><input id="d_incoming" type="number" step="1"></div>
+      <div><label>Waiting Truck</label><input id="d_waiting" type="number" step="1"></div>
+      <div><label>Chipper (ton)</label><input id="d_chipper" type="number" step="any"></div>
+      <div><label>Chip Silo (%)</label><input id="d_silo" type="number" step="any"></div>
+      <div><label>Rubber on floor (ton)</label><input id="d_rubber" type="number" step="any"></div>
+      <div><label>PD1 (m³)</label><input id="d_pd1" type="number" step="any" readonly></div>
+      <div><label>PD1 MTD DT (%)</label><input id="d_mtd" type="number" step="any"></div>
+      <div><label>Sanding (m³)</label><input id="d_sanding" type="number" step="any"></div>
+      <div><label>CTS (m³)</label><input id="d_cts" type="number" step="any"></div>
+      <div><label>WIP [All] (m³)</label><input id="d_wip" type="number" step="any"></div>
+      <div><label>Wait for Grading (m³)</label><input id="d_grading" type="number" step="any"></div>
+      <div><label>Melamine line (pcs)</label><input id="d_melamine" type="number" step="1"></div>
+    </div>
+
+    <h3 style="margin-top:22px">Segment</h3>
+    <div class="grid">
+      <div><label>Running days</label><input id="d_days" type="number" step="1"></div>
+      <div><label>Running Ton</label><input id="d_ton" type="number" step="any"></div>
+      <div><label>Average (ton/h)</label><input id="d_avgton" type="number" step="any"></div>
+      <div><label>Average (kWh/t)</label><input id="d_avgsec" type="number" step="any"></div>
+      <div><label>SEC set now (kWh/t)</label><input id="d_secset" type="number" step="any"></div>
+      <div><label>Wear (mm)</label><input id="d_wear" type="number" step="any"></div>
+      <div><label>Digestor (Bar)</label><input id="d_digestor" type="number" step="any"></div>
+      <div><label>Refiner (Bar)</label><input id="d_refinerbar" type="number" step="any"></div>
+      <div><label>Cooking time</label><input id="d_cooking" type="number" step="any"></div>
+    </div>
+
+    <h3 style="margin-top:22px">PD1 Yesterday Major DT</h3>
+    <div id="dt_rows"></div>
+    <div class="buttons"><button class="btn secondary" type="button" onclick="addDTRow()">+ Add DT</button></div>
+    <div class="status"><strong>Total Major DT: <span id="dt_total_min">0</span> min = <span id="dt_total_hr">0.00</span> Hrs</strong></div>
+
+    <h3 style="margin-top:22px">PD1 Yesterday Running</h3>
+    <div class="record-table-wrap">
+      <table class="record-table" style="min-width:980px">
+        <thead><tr><th>Thickness (mm)</th><th>Grade / Type</th><th>Width (mm)</th><th>Length (mm)</th><th>Quantity (pcs)</th><th>Volume (m³)</th><th></th></tr></thead>
+        <tbody id="run_rows"></tbody>
+      </table>
+    </div>
+    <div class="buttons"><button class="btn secondary" type="button" onclick="addRunRow()">+ Add Production</button></div>
+    <div class="status good"><strong>PD1 Total: <span id="run_total">0.00</span> m³</strong></div>
+
+    <h3 style="margin-top:22px">Remark</h3>
+    <textarea id="d_remark" style="width:100%;min-height:90px;padding:12px;border:1px solid #cbd5e1;border-radius:10px;font:inherit"></textarea>
+    <div class="buttons">
+      <button class="btn primary" type="button" onclick="saveDailyReport()">Save Daily Report</button>
+      <button class="btn secondary" type="button" onclick="copyDailyReport()">Copy Report Text</button>
+      <button class="btn secondary" type="button" onclick="newDailyReport()">New / Clear</button>
+    </div>
+    <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
+  </div></section>
+
+  <div class="footer">V4.3 • Production Dashboard • Daily Report</div>
 </div>
 
 <script>
@@ -1163,6 +1226,7 @@ function goPage(id){
   if(id==='s'){renderSifterRecords();$('s_shift').value=getHomeShift();}
   if(id==='r')renderRefiner();
   if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
+  if(id==='d')initDailyReport();
   if(id==='h')refreshHomeDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1246,5 +1310,85 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('./sw.js').catch(()=>{});
   });
 }
+
+// ---------- Daily Report ----------
+const DAILY_KEY='production_cal_daily_reports_v1';
+const dailyFields=['d_date','d_log','d_incoming','d_waiting','d_chipper','d_silo','d_rubber','d_mtd','d_sanding','d_cts','d_wip','d_grading','d_melamine','d_days','d_ton','d_avgton','d_avgsec','d_secset','d_wear','d_digestor','d_refinerbar','d_cooking','d_remark'];
+function nval(id){const x=parseFloat($(id)?.value);return Number.isFinite(x)?x:0}
+function addDTRow(name='',count='',minutes=''){
+  const row=document.createElement('div'); row.className='grid'; row.style.marginBottom='8px';
+  row.innerHTML=`<div><input class="dt_name" type="text" placeholder="Alarm / Cause" value="${name}"></div>
+  <div style="display:flex;gap:6px"><input class="dt_count" type="number" step="1" placeholder="x" value="${count}" oninput="calcDT()"><input class="dt_min" type="number" step="any" placeholder="min" value="${minutes}" oninput="calcDT()"><button class="mini-btn danger" type="button" onclick="this.closest('.grid').remove();calcDT()">×</button></div>`;
+  $('dt_rows').appendChild(row); calcDT();
+}
+function calcDT(){
+  let m=0; document.querySelectorAll('.dt_min').forEach(x=>m+=(parseFloat(x.value)||0));
+  $('dt_total_min').textContent=(Math.round(m*100)/100).toLocaleString();
+  $('dt_total_hr').textContent=(m/60).toFixed(2);
+}
+function addRunRow(v={}){
+  const tr=document.createElement('tr');
+  tr.innerHTML=`<td><input class="rr_t" type="number" step="any" value="${v.t??''}" oninput="calcRunning()" style="min-width:110px;padding:9px"></td>
+  <td><input class="rr_grade" type="text" value="${v.grade??''}" placeholder="E2 / E2 CB" style="min-width:130px;padding:9px"></td>
+  <td><input class="rr_w" type="number" step="any" value="${v.w??''}" oninput="calcRunning()" style="min-width:120px;padding:9px"></td>
+  <td><input class="rr_l" type="number" step="any" value="${v.l??''}" oninput="calcRunning()" style="min-width:120px;padding:9px"></td>
+  <td><input class="rr_q" type="number" step="1" value="${v.q??''}" oninput="calcRunning()" style="min-width:120px;padding:9px"></td>
+  <td class="rr_vol" style="font-weight:900">0.00</td>
+  <td><button class="mini-btn danger" type="button" onclick="this.closest('tr').remove();calcRunning()">×</button></td>`;
+  $('run_rows').appendChild(tr); calcRunning();
+}
+function calcRunning(){
+  let total=0;
+  document.querySelectorAll('#run_rows tr').forEach(tr=>{
+    const t=parseFloat(tr.querySelector('.rr_t').value)||0,w=parseFloat(tr.querySelector('.rr_w').value)||0,l=parseFloat(tr.querySelector('.rr_l').value)||0,q=parseFloat(tr.querySelector('.rr_q').value)||0;
+    const vol=t*w*l*q/1e9; tr.querySelector('.rr_vol').textContent=vol.toFixed(2); total+=vol;
+  });
+  $('run_total').textContent=total.toFixed(2); $('d_pd1').value=total?total.toFixed(2):'';
+}
+function collectDaily(){
+  const data={}; dailyFields.forEach(id=>data[id]=$(id).value);
+  data.dt=[...document.querySelectorAll('#dt_rows .grid')].map(r=>({name:r.querySelector('.dt_name').value,count:r.querySelector('.dt_count').value,min:r.querySelector('.dt_min').value}));
+  data.running=[...document.querySelectorAll('#run_rows tr')].map(r=>({t:r.querySelector('.rr_t').value,grade:r.querySelector('.rr_grade').value,w:r.querySelector('.rr_w').value,l:r.querySelector('.rr_l').value,q:r.querySelector('.rr_q').value}));
+  return data;
+}
+function saveDailyReport(){
+  const d=collectDaily(); if(!d.d_date){$('d_status').textContent='กรุณาเลือก Report Date';return}
+  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'); all[d.d_date]=d; localStorage.setItem(DAILY_KEY,JSON.stringify(all));
+  $('d_status').textContent='Saved Daily Report: '+d.d_date;
+}
+function loadDailyDate(date){
+  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'),d=all[date]; if(!d)return false;
+  dailyFields.forEach(id=>{if($(id))$(id).value=d[id]??''});
+  $('dt_rows').innerHTML=''; (d.dt||[]).forEach(x=>addDTRow(x.name,x.count,x.min));
+  $('run_rows').innerHTML=''; (d.running||[]).forEach(x=>addRunRow(x)); calcDT();calcRunning();return true;
+}
+function newDailyReport(){
+  dailyFields.forEach(id=>{if($(id))$(id).value=''}); $('d_date').value=new Date().toISOString().slice(0,10);
+  $('dt_rows').innerHTML=''; ['Metal alarm','Double mat','High density alarm','Change production'].forEach(x=>addDTRow(x,'',''));
+  $('run_rows').innerHTML=''; addRunRow(); calcDT();calcRunning(); $('d_status').textContent='New Daily Report';
+}
+function initDailyReport(){
+  if($('d_date').dataset.ready)return;
+  $('d_date').dataset.ready='1'; $('d_date').addEventListener('change',()=>{if(!loadDailyDate($('d_date').value)){newDailyReport();$('d_date').value=$('d_date').value||new Date().toISOString().slice(0,10)}});
+  const date=new Date().toISOString().slice(0,10); $('d_date').value=date;
+  if(!loadDailyDate(date))newDailyReport();
+}
+function reportLine(label,id,unit=''){const v=$(id).value.trim();return `${label} : ${v===''?'-':v}${unit}`}
+function buildDailyText(){
+  const date=$('d_date').value||''; const dt=[...document.querySelectorAll('#dt_rows .grid')];
+  const runs=[...document.querySelectorAll('#run_rows tr')];
+  let s=`Daily report  ${date}\n\n`;
+  s+=reportLine('log stock','d_log',' ton')+'\n'+reportLine('Incoming Truck','d_incoming')+'\n'+reportLine('Waiting Truck','d_waiting')+'\n'+reportLine('Chipper','d_chipper',' ton')+'\n'+reportLine('Chip Silo','d_silo',' %')+'\n'+reportLine('Rubber on floor','d_rubber',' ton')+'\n'+reportLine('PD1','d_pd1',' m³')+'\n'+reportLine('PD1 MTD DT','d_mtd',' %')+'\n'+reportLine('Sanding','d_sanding',' m³')+'\n'+reportLine('CTS','d_cts',' m³')+'\n'+reportLine('WIP [ All]','d_wip',' m³')+'\n'+reportLine('Wait for Grading','d_grading',' m³')+'\n'+reportLine('Melamine line','d_melamine',' pcs')+'\n\nSegment\n';
+  s+=reportLine('Running days','d_days',' day')+'\n'+reportLine('Running Ton','d_ton',' ton')+'\n'+reportLine('Average','d_avgton',' ton/h')+'\n'+reportLine('Average','d_avgsec',' kWh/t')+'\n'+reportLine('SEC set now','d_secset',' kWh/t')+'\n'+reportLine('Wear','d_wear',' mm')+'\n'+reportLine('Digestor','d_digestor',' Bar')+'\n'+reportLine('Refiner','d_refinerbar',' Bar')+'\n'+reportLine('Cooking time','d_cooking',' Bar')+'\n\nRemark\n'+($('d_remark').value||'')+'\n\nPD1 yesterday major DT\n';
+  dt.forEach(r=>{const n=r.querySelector('.dt_name').value||'-',c=r.querySelector('.dt_count').value||'0',m=r.querySelector('.dt_min').value||'0';s+=`${n} ${c} x : ${m} min\n`});
+  s+=`Total major DT : ${$('dt_total_hr').textContent} Hrs\n\nPD1 yesterday running\n`;
+  runs.forEach(r=>{const t=r.querySelector('.rr_t').value,g=r.querySelector('.rr_grade').value,w=r.querySelector('.rr_w').value,l=r.querySelector('.rr_l').value,v=r.querySelector('.rr_vol').textContent;if(t||g||w||l)s+=`${t} ${g} ${w} x ${l} : ${v} m³\n`});
+  s+=`Total : ${$('run_total').textContent} m³`;
+  return s;
+}
+async function copyDailyReport(){
+  const txt=buildDailyText(); try{await navigator.clipboard.writeText(txt);$('d_status').textContent='Copied Daily Report text ✓'}catch(e){prompt('Copy Daily Report',txt)}
+}
+
 </script>
 </body></html>
