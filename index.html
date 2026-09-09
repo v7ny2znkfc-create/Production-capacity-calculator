@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V4.5 PWA</div>
+    <div class="version">V4.6 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -248,6 +248,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="home-menu three">
       <button class="home-link" onclick="goPage('r')"><strong>Refiner Plate Record</strong><span>ประวัติ Plate และ SEC</span></button>
       <button class="home-link" onclick="goPage('rec')"><strong>Recipe Library</strong><span>Standard parameter by thickness</span></button>
+      <button class="home-link" onclick="goPage('ml')"><strong>Machine Life</strong><span>Part life, due date & replacement tracking</span></button>
       <button class="home-link" onclick="goPage('d')"><strong>Daily Report</strong><span>PD1 running & Major DT</span></button>
     </div>
   </div></section>
@@ -589,6 +590,38 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="gt_status" class="status">กรอก Tank Level และ Glue Flow เพื่อคำนวณ</div>
   </div></section>
 
+  <section id="ml" class="panel"><div class="card">
+    <h2>Machine Life Tracking</h2>
+    <div class="help">ติดตามอายุ Part จาก Master Plan Maintenance • คำนวณ Current Age, Remaining Days และ Next Due อัตโนมัติ</div>
+    <div class="grid" style="margin-top:14px">
+      <div><label>Search Equipment / Code</label><input id="ml_search" type="text" placeholder="เช่น Ribbon Feeder, PMR014" oninput="renderMachineLife()"></div>
+      <div><label>Status</label><select id="ml_filter" onchange="renderMachineLife()"><option value="all">All</option><option value="overdue">Overdue</option><option value="due30">Due within 30 days</option><option value="normal">Normal</option></select></div>
+    </div>
+    <div class="result-grid" style="margin-top:16px">
+      <div class="result-card"><span>Overdue</span><strong id="ml_overdue">0</strong></div>
+      <div class="result-card"><span>Due ≤ 30 days</span><strong id="ml_due30">0</strong></div>
+      <div class="result-card"><span>Normal</span><strong id="ml_normal">0</strong></div>
+    </div>
+    <div id="ml_list" style="margin-top:16px"></div>
+    <div class="admin-only" style="margin-top:18px">
+      <h3>Add / Update Machine Life</h3>
+      <div class="grid">
+        <div><label>Equipment / Part</label><input id="ml_name" type="text"></div>
+        <div><label>Code</label><input id="ml_code" type="text"></div>
+        <div><label>Standard Life (day)</label><input id="ml_life" type="number" min="1"></div>
+        <div><label>Historical Avg (day)</label><input id="ml_avg" type="number" min="0"></div>
+        <div><label>Last Change</label><input id="ml_last" type="date"></div>
+        <div><label>Spare Status</label><input id="ml_spare" type="text"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">
+        <button class="btn primary" type="button" onclick="saveMachineLifeItem()">Save Item</button>
+        <button class="btn secondary" type="button" onclick="clearMachineLifeForm()">Clear</button>
+        <button class="btn secondary" type="button" onclick="restoreMachineLifeSeed()">Restore Master Seed</button>
+      </div>
+      <div id="ml_status" class="status"></div>
+    </div>
+  </div></section>
+
   <section id="d" class="panel"><div class="card">
     <h2>Daily Report</h2>
     <div class="help">กรอกข้อมูลประจำวัน โดย PD1 Yesterday Running จะคำนวณ m³ จากจำนวนแผ่นอัตโนมัติ และ Major DT จะรวมเวลาให้อัตโนมัติ</div>
@@ -651,7 +684,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V4.5 • Production Dashboard • Glue Tank Calculator</div>
+  <div class="footer">V4.6 • Production Dashboard • Machine Life Tracking</div>
 </div>
 
 <script>
@@ -1267,6 +1300,7 @@ function goPage(id){
   if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
   if(id==='d')initDailyReport();
   if(id==='gt')calcGlueTank();
+  if(id==='ml')renderMachineLife();
   if(id==='h')refreshHomeDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1497,6 +1531,18 @@ function calcGlueTank(){
     else { st.className='status good'; st.textContent='Glue tank remaining time > 60 min'; }
   }
 }
+
+
+const ML_KEY='production_cal_machine_life_v1';
+const ML_SEED=[{"name": "PU.33. Saw belt / Forming belt", "code": "PMR005", "life": 365, "avg": 269, "last": "2025-12-18", "spare": "Store 1 PC"}, {"name": "Pre Press Screen belt", "code": "PMR006", "life": 180, "avg": 160, "last": "2026-02-18", "spare": "Store 1 PC"}, {"name": "Pre Press Top belt", "code": "PMR007", "life": 180, "avg": 208, "last": "2026-04-09", "spare": "Store 1 PC (Forbo)"}, {"name": "Pre Press Bottom belt", "code": "PMR008", "life": 180, "avg": 169, "last": "2025-12-18", "spare": "Store 1 PC (Forbo)"}, {"name": "Transfer belt", "code": "PMR009", "life": 150, "avg": 98, "last": "2026-05-19", "spare": "Store 2 PC"}, {"name": "Plug Screw Feeder Screw", "code": "PMR010", "life": 365, "avg": 335, "last": "2026-06-08", "spare": "Store 1 PC"}, {"name": "PSF Sleeve A", "code": "AMC2176", "life": 180, "avg": 237, "last": "2026-06-08", "spare": "Store 1 PC"}, {"name": "PSF Sleeve B", "code": "AMC2180", "life": 365, "avg": 284, "last": "2025-09-14", "spare": "Store 0 PC"}, {"name": "PSF Liner", "code": "PMR011", "life": 180, "avg": 181, "last": "2024-10-28", "spare": "Store 1 set"}, {"name": "Cone PSF", "code": "", "life": 365, "avg": 441, "last": "2025-09-14", "spare": ""}, {"name": "Motor Main Refiner", "code": "", "life": 365, "avg": 1093, "last": "2026-04-24", "spare": "Store 0 PC"}, {"name": "Discharge Screw", "code": "PMR013", "life": 730, "avg": 832, "last": "2026-06-12", "spare": "Store 0 PC"}, {"name": "Ribbon Feeder", "code": "PMR014", "life": 365, "avg": 561, "last": "2026-07-21", "spare": "Store 1 PC"}, {"name": "Agitator Bush", "code": "PMR015", "life": 365, "avg": 412, "last": "2025-04-03", "spare": "Store 0 PC"}, {"name": "Chipper Rotor Drum", "code": "PMR016", "life": 730, "avg": 891, "last": "2024-08-24", "spare": "Store 0 PC"}, {"name": "Chipper Rotor Drum Housing", "code": "PMR016", "life": 1095, "avg": 884, "last": "2024-08-03", "spare": "Store 0 PC"}, {"name": "Chipper Drum Bottom Screen", "code": "PMR016", "life": 270, "avg": 337, "last": "2026-07-27", "spare": "Store 0 PC"}, {"name": "Diffensor X-Ray Tube", "code": "PMR017", "life": 730, "avg": 687, "last": "2026-06-30", "spare": "Store 0 PC"}, {"name": "Diffensor X-Ray Generator", "code": "PMR018", "life": 1460, "avg": 1093, "last": "2026-06-30", "spare": "Store 0 PC"}, {"name": "Refiner Blow Valve", "code": "PMR019", "life": 270, "avg": 242, "last": "2026-06-05", "spare": "Store 1 Set"}, {"name": "Forming Reject Nose Bearing", "code": "PMR020", "life": 270, "avg": 347, "last": "2026-02-16", "spare": "Store 1 Set"}, {"name": "Glue Refiner Pump", "code": "PMR021", "life": 360, "avg": 250, "last": "2026-05-08", "spare": "Store 1 Set"}, {"name": "Hi Jet Pump #1", "code": "PMR022", "life": 240, "avg": 160, "last": "2026-07-09", "spare": "Store 1 PC"}, {"name": "Hi Jet Pump #2", "code": "PMR023", "life": 240, "avg": 116, "last": "2026-07-09", "spare": "Store 1 PC"}, {"name": "Refiner Rotor Scraper", "code": "PMR024", "life": 180, "avg": 239, "last": "2026-03-04", "spare": "Store 8 EA"}, {"name": "CPS+ Cylinder Bracket Tighten", "code": "PMR025", "life": 365, "avg": 994, "last": "2025-04-03", "spare": ""}, {"name": "CPS+ Friction Plate Tighten 50Nm", "code": "PMR026", "life": 180, "avg": 252, "last": "2026-04-03", "spare": ""}, {"name": "Discharge Screw Short Piece", "code": "", "life": 365, "avg": 531, "last": "2024-11-14", "spare": ""}];
+function mlData(){try{let x=JSON.parse(localStorage.getItem(ML_KEY)||'null');if(Array.isArray(x))return x}catch(e){}localStorage.setItem(ML_KEY,JSON.stringify(ML_SEED));return JSON.parse(JSON.stringify(ML_SEED))}
+function mlDate(s){if(!s)return null;let d=new Date(s+'T00:00:00');return isNaN(d)?null:d}
+function mlCalc(it){let last=mlDate(it.last),today=new Date();today.setHours(0,0,0,0);if(!last||!it.life)return {age:null,remain:null,due:'-',status:'normal'};let age=Math.floor((today-last)/86400000),due=new Date(last);due.setDate(due.getDate()+Number(it.life));let remain=Math.floor((due-today)/86400000);return {age,remain,due:due.toISOString().slice(0,10),status:remain<0?'overdue':remain<=30?'due30':'normal'}}
+function renderMachineLife(){let list=$('ml_list');if(!list)return;let data=mlData(),q=($('ml_search')?.value||'').toLowerCase().trim(),f=$('ml_filter')?.value||'all',cnt={overdue:0,due30:0,normal:0};data.forEach(it=>cnt[mlCalc(it).status]++);$('ml_overdue').textContent=cnt.overdue;$('ml_due30').textContent=cnt.due30;$('ml_normal').textContent=cnt.normal;data=data.filter(it=>{let c=mlCalc(it);return(!q||(it.name+' '+it.code).toLowerCase().includes(q))&&(f==='all'||c.status===f)}).sort((a,b)=>(mlCalc(a).remain??99999)-(mlCalc(b).remain??99999));if(!data.length){list.innerHTML='<div class="status">No matching equipment</div>';return}list.innerHTML=data.map(it=>{let c=mlCalc(it),badge=c.status==='overdue'?'🔴 Overdue':c.status==='due30'?'🟠 Due Soon':'🟢 Normal',rem=c.remain==null?'-':c.remain<0?Math.abs(c.remain)+' days overdue':c.remain+' days left',warn=it.avg&&it.life&&Number(it.avg)<Number(it.life)?'<div style="font-size:12px;color:#b26a00;margin-top:6px">Historical avg '+it.avg+' d &lt; standard '+it.life+' d</div>':'';return '<div class="card" style="margin:10px 0;padding:14px"><div style="display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap"><div><strong>'+it.name+'</strong><div class="help">'+(it.code||'-')+' • Spare: '+(it.spare||'-')+'</div></div><span style="font-weight:700">'+badge+'</span></div><div class="grid" style="margin-top:10px"><div><span class="help">Standard Life</span><strong style="display:block">'+it.life+' days</strong></div><div><span class="help">Current Age</span><strong style="display:block">'+(c.age==null?'-':c.age+' days')+'</strong></div><div><span class="help">Remaining</span><strong style="display:block">'+rem+'</strong></div><div><span class="help">Next Due</span><strong style="display:block">'+c.due+'</strong></div><div><span class="help">Historical Avg</span><strong style="display:block">'+(it.avg||'-')+' days</strong></div></div>'+warn+'<div class="admin-only" style="margin-top:10px"><button class="btn secondary" type="button" onclick="editMachineLife(\''+encodeURIComponent(it.name)+'\')">Edit</button></div></div>'}).join('')}
+function clearMachineLifeForm(){['ml_name','ml_code','ml_life','ml_avg','ml_last','ml_spare'].forEach(id=>{if($(id))$(id).value=''})}
+function editMachineLife(n){let name=decodeURIComponent(n),it=mlData().find(x=>x.name===name);if(!it)return;$('ml_name').value=it.name;$('ml_code').value=it.code||'';$('ml_life').value=it.life||'';$('ml_avg').value=it.avg||'';$('ml_last').value=it.last||'';$('ml_spare').value=it.spare||''}
+function saveMachineLifeItem(){let name=$('ml_name').value.trim(),life=parseFloat($('ml_life').value),last=$('ml_last').value;if(!name||!life||!last){$('ml_status').textContent='กรอก Equipment, Standard Life และ Last Change ให้ครบ';return}let d=mlData(),i=d.findIndex(x=>x.name.toLowerCase()===name.toLowerCase()),it={name,code:$('ml_code').value.trim(),life,avg:parseFloat($('ml_avg').value)||0,last,spare:$('ml_spare').value.trim()};if(i>=0)d[i]=it;else d.push(it);localStorage.setItem(ML_KEY,JSON.stringify(d));$('ml_status').textContent='Saved ✓';clearMachineLifeForm();renderMachineLife()}
+function restoreMachineLifeSeed(){localStorage.setItem(ML_KEY,JSON.stringify(ML_SEED));renderMachineLife();$('ml_status').textContent='Restored Master seed ✓'}
 
 </script>
 </body></html>
