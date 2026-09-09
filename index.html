@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V4.8 PWA</div>
+    <div class="version">V4.8.1 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -760,7 +760,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V4.8 • Production Dashboard • Machine Life Admin Management</div>
+  <div class="footer">V4.8.1 • Production Dashboard • Machine Life Admin Fix</div>
 </div>
 
 <script>
@@ -895,6 +895,7 @@ async function adminLogin(){
   sessionStorage.setItem(ADMIN_SESSION_KEY,String(Date.now()+ADMIN_MINUTES*60*1000));
   updateAdminUI();
   renderRefiner();
+  if($('ml_list'))renderMachineLife();
   if($('g_record_body'))renderGlueRecords();
   if($('s_record_body'))renderSifterRecords();
   if($('r_status'))status('r',`Admin mode เปิดใช้งาน ${ADMIN_MINUTES} นาที`,'good');
@@ -905,6 +906,7 @@ function adminLogout(){
   refinerEditId=null;
   updateAdminUI();
   renderRefiner();
+  if($('ml_list'))renderMachineLife();
   if($('g_record_body'))renderGlueRecords();
   if($('s_record_body'))renderSifterRecords();
   if($('r_status'))status('r','ล็อกแล้ว • View only');
@@ -939,12 +941,6 @@ function updateAdminUI(){
   }
   if(typeof syncGlueSettings==='function')syncGlueSettings();
   if(typeof updateRecipeAdminUI==='function')updateRecipeAdminUI();
-  const mla=$('ml_add_btn'), mli=$('ml_inactive_wrap');
-  if(mla)mla.classList.toggle('admin-hidden',!on);
-  if(mli)mli.classList.toggle('admin-hidden',!on);
-  if(!on && $('ml_show_inactive'))$('ml_show_inactive').checked=false;
-  if($('ml_list'))renderMachineLife();
-  if(mlCurrentRow!=null && $('ml_detail_view')?.style.display!=='none')openMachineDetail(mlCurrentRow);
 }
 setInterval(()=>{
   if(!adminActive()){
@@ -1699,6 +1695,11 @@ function mlNextRow(data){
 
 function renderMachineLife(){
   const list=$('ml_list');if(!list)return;
+  const on=adminActive();
+  const mla=$('ml_add_btn'),mli=$('ml_inactive_wrap');
+  if(mla)mla.classList.toggle('admin-hidden',!on);
+  if(mli)mli.classList.toggle('admin-hidden',!on);
+  if(!on && $('ml_show_inactive'))$('ml_show_inactive').checked=false;
   const data=mlData();
   const q=($('ml_search')?.value||'').trim().toLowerCase();
   const filter=$('ml_filter')?.value||'all';
