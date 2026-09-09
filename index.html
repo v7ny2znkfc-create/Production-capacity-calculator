@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V4.3 PWA</div>
+    <div class="version">V4.3.1 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -584,7 +584,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <div><label>Wear (mm)</label><input id="d_wear" type="number" step="any"></div>
       <div><label>Digestor (Bar)</label><input id="d_digestor" type="number" step="any"></div>
       <div><label>Refiner (Bar)</label><input id="d_refinerbar" type="number" step="any"></div>
-      <div><label>Cooking time</label><input id="d_cooking" type="number" step="any"></div>
+      <div><label>Cooking time (min)</label><input id="d_cooking" type="number" step="any"></div>
     </div>
 
     <h3 style="margin-top:22px">PD1 Yesterday Major DT</h3>
@@ -612,7 +612,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V4.3 • Production Dashboard • Daily Report</div>
+  <div class="footer">V4.3.1 • Production Dashboard • Daily Report</div>
 </div>
 
 <script>
@@ -1369,7 +1369,7 @@ function newDailyReport(){
 }
 function initDailyReport(){
   if($('d_date').dataset.ready)return;
-  $('d_date').dataset.ready='1'; $('d_date').addEventListener('change',()=>{if(!loadDailyDate($('d_date').value)){newDailyReport();$('d_date').value=$('d_date').value||new Date().toISOString().slice(0,10)}});
+  $('d_date').dataset.ready='1'; $('d_date').addEventListener('change',()=>{const selectedDate=$('d_date').value;if(!loadDailyDate(selectedDate)){newDailyReport();$('d_date').value=selectedDate;}});
   const date=new Date().toISOString().slice(0,10); $('d_date').value=date;
   if(!loadDailyDate(date))newDailyReport();
 }
@@ -1379,7 +1379,7 @@ function buildDailyText(){
   const runs=[...document.querySelectorAll('#run_rows tr')];
   let s=`Daily report  ${date}\n\n`;
   s+=reportLine('log stock','d_log',' ton')+'\n'+reportLine('Incoming Truck','d_incoming')+'\n'+reportLine('Waiting Truck','d_waiting')+'\n'+reportLine('Chipper','d_chipper',' ton')+'\n'+reportLine('Chip Silo','d_silo',' %')+'\n'+reportLine('Rubber on floor','d_rubber',' ton')+'\n'+reportLine('PD1','d_pd1',' m³')+'\n'+reportLine('PD1 MTD DT','d_mtd',' %')+'\n'+reportLine('Sanding','d_sanding',' m³')+'\n'+reportLine('CTS','d_cts',' m³')+'\n'+reportLine('WIP [ All]','d_wip',' m³')+'\n'+reportLine('Wait for Grading','d_grading',' m³')+'\n'+reportLine('Melamine line','d_melamine',' pcs')+'\n\nSegment\n';
-  s+=reportLine('Running days','d_days',' day')+'\n'+reportLine('Running Ton','d_ton',' ton')+'\n'+reportLine('Average','d_avgton',' ton/h')+'\n'+reportLine('Average','d_avgsec',' kWh/t')+'\n'+reportLine('SEC set now','d_secset',' kWh/t')+'\n'+reportLine('Wear','d_wear',' mm')+'\n'+reportLine('Digestor','d_digestor',' Bar')+'\n'+reportLine('Refiner','d_refinerbar',' Bar')+'\n'+reportLine('Cooking time','d_cooking',' Bar')+'\n\nRemark\n'+($('d_remark').value||'')+'\n\nPD1 yesterday major DT\n';
+  s+=reportLine('Running days','d_days',' day')+'\n'+reportLine('Running Ton','d_ton',' ton')+'\n'+reportLine('Average','d_avgton',' ton/h')+'\n'+reportLine('Average','d_avgsec',' kWh/t')+'\n'+reportLine('SEC set now','d_secset',' kWh/t')+'\n'+reportLine('Wear','d_wear',' mm')+'\n'+reportLine('Digestor','d_digestor',' Bar')+'\n'+reportLine('Refiner','d_refinerbar',' Bar')+'\n'+reportLine('Cooking time','d_cooking',' min')+'\n\nRemark\n'+($('d_remark').value||'')+'\n\nPD1 yesterday major DT\n';
   dt.forEach(r=>{const n=r.querySelector('.dt_name').value||'-',c=r.querySelector('.dt_count').value||'0',m=r.querySelector('.dt_min').value||'0';s+=`${n} ${c} x : ${m} min\n`});
   s+=`Total major DT : ${$('dt_total_hr').textContent} Hrs\n\nPD1 yesterday running\n`;
   runs.forEach(r=>{const t=r.querySelector('.rr_t').value,g=r.querySelector('.rr_grade').value,w=r.querySelector('.rr_w').value,l=r.querySelector('.rr_l').value,v=r.querySelector('.rr_vol').textContent;if(t||g||w||l)s+=`${t} ${g} ${w} x ${l} : ${v} m³\n`});
