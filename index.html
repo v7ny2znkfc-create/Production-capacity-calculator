@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.1.1 PWA</div>
+    <div class="version">V5.2 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -596,151 +596,6 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 
 
 
-  <section id="ml" class="panel"><div class="card">
-    <div id="ml_list_view">
-      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
-        <div>
-          <h2>Machine Life</h2>
-          <div class="help">ข้อมูลจาก Master Plan Part Replacement • แตะชื่อเครื่องจักรเพื่อดูรายละเอียด</div>
-        </div>
-        <button id="ml_add_btn" class="btn primary admin-hidden" type="button" onclick="openAddMachine()">+ Add Machine</button>
-      </div>
-
-      <div class="grid" style="margin-top:14px">
-        <div>
-          <label>Search Machine / Code</label>
-          <input id="ml_search" type="text" placeholder="เช่น Ribbon Feeder, PMR014" oninput="renderMachineLife()">
-        </div>
-        <div>
-          <label>Status</label>
-          <select id="ml_filter" onchange="renderMachineLife()">
-            <option value="all">All</option>
-            <option value="overdue">Overdue</option>
-            <option value="due30">Due Soon</option>
-            <option value="normal">Normal</option>
-          </select>
-        </div>
-      </div>
-
-      <div id="ml_inactive_wrap" class="admin-hidden" style="margin-top:10px">
-        <label style="display:flex;align-items:center;gap:8px;font-weight:700">
-          <input id="ml_show_inactive" type="checkbox" onchange="renderMachineLife()" style="width:auto">
-          Show inactive equipment
-        </label>
-      </div>
-
-      <div id="ml_data_admin" class="admin-hidden" style="margin-top:12px">
-        <div class="card" style="padding:14px">
-          <h3 style="margin-top:0">Machine Data Management</h3>
-          <div class="help">ใช้สำหรับดูแล Master Data ของ Machine Life และแจกจ่ายข้อมูลให้ผู้ใช้อื่น โดยยังไม่ต้องใช้ Database กลาง</div>
-          <div class="grid" style="margin-top:12px">
-            <div>
-              <span class="help">Machine Data Version</span>
-              <strong id="ml_data_version" style="display:block">-</strong>
-            </div>
-            <div>
-              <span class="help">Last Updated</span>
-              <strong id="ml_data_updated" style="display:block">-</strong>
-            </div>
-          </div>
-
-          <div class="grid" style="margin-top:10px">
-            <div>
-              <span class="help">Published Master</span>
-              <strong id="ml_remote_version" style="display:block">Not checked</strong>
-            </div>
-            <div>
-              <span class="help">Last Sync</span>
-              <strong id="ml_last_sync" style="display:block">-</strong>
-            </div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
-            <button class="btn primary" type="button" onclick="exportMachineData()">Export Master Data</button>
-            <button class="btn secondary" type="button" onclick="syncMachineDataNow(true)">Sync from GitHub</button>
-            <label class="btn secondary" style="display:inline-flex;align-items:center;cursor:pointer;margin:0">
-              Import Master Data
-              <input id="ml_import_file" type="file" accept=".json,application/json" onchange="importMachineDataFile(this)" style="display:none">
-            </label>
-            <button class="btn secondary" type="button" onclick="downloadMachineBackup()">Backup Current Data</button>
-            <button class="btn secondary" type="button" onclick="resetMachineDataToSeed()">Reset to Master Seed</button>
-          </div>
-          <div id="ml_data_status" class="status" style="margin-top:10px"></div>
-        </div>
-      </div>
-
-      <div class="result-grid" style="margin-top:16px">
-        <div class="result-card"><span>Overdue</span><strong id="ml_overdue">0</strong></div>
-        <div class="result-card"><span>Due Soon</span><strong id="ml_due30">0</strong></div>
-        <div class="result-card"><span>Normal</span><strong id="ml_normal">0</strong></div>
-      </div>
-
-      <div id="ml_list" style="margin-top:14px"></div>
-    </div>
-
-    <div id="ml_detail_view" style="display:none">
-      <button class="btn secondary" type="button" onclick="closeMachineDetail()">← Back to Machine List</button>
-      <div id="ml_detail" style="margin-top:14px"></div>
-    </div>
-
-    <div id="ml_form_view" style="display:none">
-      <button class="btn secondary" type="button" onclick="closeMachineForm()">← Cancel</button>
-      <div class="card" style="margin-top:14px;padding:14px">
-        <h2 id="ml_form_title">Add Machine</h2>
-        <div class="grid">
-          <div><label>Machine / Equipment Name *</label><input id="mlf_name" type="text"></div>
-          <div><label>Area / Group</label><input id="mlf_area" type="text"></div>
-          <div><label>Master Code / PMR</label><input id="mlf_master" type="text"></div>
-          <div><label>Part Code</label><input id="mlf_part" type="text"></div>
-          <div><label>Job Description</label><input id="mlf_job" type="text"></div>
-          <div><label>Life Time (day) *</label><input id="mlf_life" type="number" min="1"></div>
-          <div><label>Last Change / Base Date *</label><input id="mlf_last" type="date"></div>
-          <div><label>Historical Avg (day)</label><input id="mlf_avg" type="number" min="0" step="0.1"></div>
-          <div><label>Spare Status</label><input id="mlf_spare" type="text"></div>
-          <div><label>Price (THB)</label><input id="mlf_price" type="number" min="0" step="0.01"></div>
-        </div>
-        <div style="margin-top:12px">
-          <label>Comment</label>
-          <textarea id="mlf_comment" rows="3" style="width:100%"></textarea>
-        </div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-          <button class="btn primary" type="button" onclick="saveMachineForm()">Save Machine</button>
-          <button class="btn secondary" type="button" onclick="closeMachineForm()">Cancel</button>
-        </div>
-        <div id="mlf_status" class="status"></div>
-      </div>
-    </div>
-
-    <div id="ml_replace_view" style="display:none">
-      <button class="btn secondary" type="button" onclick="closeReplacementForm()">← Cancel</button>
-      <div class="card" style="margin-top:14px;padding:14px">
-        <h2>Record Replacement</h2>
-        <div class="help" id="mlr_machine"></div>
-        <div class="grid" style="margin-top:14px">
-          <div><label>Replacement Date *</label><input id="mlr_date" type="date"></div>
-          <div><label>Event Type</label>
-            <select id="mlr_type">
-              <option>Change</option>
-              <option>Replacement</option>
-              <option>Overhaul</option>
-              <option>Repair</option>
-              <option>Check</option>
-            </select>
-          </div>
-        </div>
-        <div style="margin-top:12px">
-          <label>Detail / Remark</label>
-          <textarea id="mlr_note" rows="3" style="width:100%" placeholder="เช่น Change new screw (Sahamit)"></textarea>
-        </div>
-        <div class="help" style="margin-top:10px">บันทึก Replacement จะเริ่มนับอายุรอบใหม่ และคำนวณ Next Due จาก Life Time ปัจจุบันอัตโนมัติ</div>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px">
-          <button class="btn primary" type="button" onclick="saveReplacement()">Save Replacement</button>
-          <button class="btn secondary" type="button" onclick="closeReplacementForm()">Cancel</button>
-        </div>
-        <div id="mlr_status" class="status"></div>
-      </div>
-    </div>
-  </div></section>
-
   <section id="d" class="panel"><div class="card">
     <h2>Daily Report</h2>
     <div class="help">กรอกข้อมูลประจำวัน โดย PD1 Yesterday Running จะคำนวณ m³ จากจำนวนแผ่นอัตโนมัติ และ Major DT จะรวมเวลาให้อัตโนมัติ</div>
@@ -803,7 +658,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V5.1.1 • Production Dashboard • Report Layout Update</div>
+  <div class="footer">V5.2 • Production Dashboard • Production Shift 1 Tools</div>
 </div>
 
 <script>
@@ -938,7 +793,7 @@ async function adminLogin(){
   sessionStorage.setItem(ADMIN_SESSION_KEY,String(Date.now()+ADMIN_MINUTES*60*1000));
   updateAdminUI();
   renderRefiner();
-  if($('ml_list'))renderMachineLife();
+  if($('ml_list'))
   if($('g_record_body'))renderGlueRecords();
   if($('s_record_body'))renderSifterRecords();
   if($('r_status'))status('r',`Admin mode เปิดใช้งาน ${ADMIN_MINUTES} นาที`,'good');
@@ -949,7 +804,7 @@ function adminLogout(){
   refinerEditId=null;
   updateAdminUI();
   renderRefiner();
-  if($('ml_list'))renderMachineLife();
+  if($('ml_list'))
   if($('g_record_body'))renderGlueRecords();
   if($('s_record_body'))renderSifterRecords();
   if($('r_status'))status('r','ล็อกแล้ว • View only');
@@ -1421,7 +1276,7 @@ function goPage(id){
   if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
   if(id==='d')initDailyReport();
   if(id==='gt')calcGlueTank();
-  if(id==='ml')renderMachineLife();
+  if(id==='ml')
   if(id==='h')refreshHomeDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1587,7 +1442,7 @@ async function copyDailyReport(){
 
 
 
-// ---------- Glue Flow / Sifter PNG Report V5.1.1 ----------
+// ---------- Glue Flow / Sifter PNG Report V5.2 ----------
 function opsReportDateLabel(dateValue){
   if(!dateValue)return '-';
   const d=new Date(dateValue+'T00:00:00');
@@ -2176,7 +2031,6 @@ function importMachineDataFile(input){
       imeta.source='Imported Master Data';
       mlSetMeta(imeta);
       updateMachineDataMetaUI();
-      renderMachineLife();
       if($('ml_data_status'))$('ml_data_status').textContent=`Imported ${imeta.version||'-'} • ${incoming.length} machines`;
       alert(`Import สำเร็จ\nMachine Data: ${imeta.version||'-'}\nจำนวน ${incoming.length} รายการ`);
     }catch(err){
@@ -2239,7 +2093,6 @@ async function syncMachineDataNow(manual=false){
       sm.lastResult='Updated';
       mlSetSyncMeta(sm);
       updateMachineDataMetaUI();
-      renderMachineLife();
       if(manual && $('ml_data_status'))$('ml_data_status').textContent=`Sync complete • ${remoteMeta.version} • ${incoming.length} machines`;
     }else{
       sm.lastResult=mlCompareVersion(remoteMeta.version,localMeta.version)===0?'Latest':'Local newer';
@@ -2269,10 +2122,7 @@ function resetMachineDataToSeed(){
   localStorage.setItem('production_cal_machine_life_prereset_backup_v1',JSON.stringify(current));
   localStorage.setItem(ML_KEY,JSON.stringify(JSON.parse(JSON.stringify(ML_SEED))));
   mlSetMeta({schema:ML_DATA_SCHEMA,version:'v1.0',updatedAt:mlNowISO(),source:'Reset to Master Seed'});
-  updateMachineDataMetaUI();
-  renderMachineLife();
-
-scheduleMachineAutoSync();  if($('ml_data_status'))$('ml_data_status').textContent='Reset to Master Seed completed';
+  updateMachineDataMetaUI();  if($('ml_data_status'))$('ml_data_status').textContent='Reset to Master Seed completed';
 }
 
 </script>
