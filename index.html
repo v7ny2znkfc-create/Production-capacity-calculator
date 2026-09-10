@@ -172,7 +172,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.0 PWA</div>
+    <div class="version">V5.1 PWA</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -419,6 +419,8 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="buttons">
       <button class="btn primary" type="button" onclick="calculateGlue()">Calculate</button>
       <button class="btn secondary" type="button" onclick="saveGlueRecord()">Save Shift Record</button>
+      <button class="btn secondary" type="button" onclick="shareGlueReportImage()">Share Image</button>
+      <button class="btn secondary" type="button" onclick="saveGlueReportImage()">Save PNG</button>
       <button class="btn secondary" type="button" onclick="clearGlue()">Clear</button>
       <button class="btn secondary" type="button" onclick="exampleGlue()">Example</button>
     </div>
@@ -456,6 +458,8 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="buttons">
       <button class="btn primary" type="button" onclick="calculateSifter()">Calculate</button>
       <button class="btn secondary" type="button" onclick="saveSifterRecord()">Save Shift Record</button>
+      <button class="btn secondary" type="button" onclick="shareSifterReportImage()">Share Image</button>
+      <button class="btn secondary" type="button" onclick="saveSifterReportImage()">Save PNG</button>
       <button class="btn secondary" type="button" onclick="clearSifter()">Clear</button>
       <button class="btn secondary" type="button" onclick="exampleSifter()">Example</button>
     </div>
@@ -799,7 +803,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V5.0 • Production Dashboard • Auto Sync Machine Master</div>
+  <div class="footer">V5.1 • Production Dashboard • Auto Sync + Image Reports</div>
 </div>
 
 <script>
@@ -1579,6 +1583,149 @@ function buildDailyText(){
 }
 async function copyDailyReport(){
   const txt=buildDailyText(); try{await navigator.clipboard.writeText(txt);$('d_status').textContent='Copied Daily Report text ✓'}catch(e){prompt('Copy Daily Report',txt)}
+}
+
+
+
+// ---------- Glue Flow / Sifter PNG Report V5.1 ----------
+function opsReportDateLabel(dateValue){
+  if(!dateValue)return '-';
+  const d=new Date(dateValue+'T00:00:00');
+  if(isNaN(d))return dateValue;
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+function opsReportCanvas(title, subtitle, dateValue, shiftValue, rows, resultLabel, resultValue, resultUnit, statusLevel, statusText){
+  const W=1080,H=1400,P=62;
+  const c=document.createElement('canvas'); c.width=W; c.height=H;
+  const x=c.getContext('2d');
+
+  const bg='#f4f7fb', navy='#17324d', text='#172b3a', muted='#718096',
+        line='#dfe7ef', green='#18794e', orange='#b26a00', red='#b42318',
+        paleGreen='#eaf7f0', paleOrange='#fff4df', paleRed='#fdeceb';
+
+  x.fillStyle=bg; x.fillRect(0,0,W,H);
+  x.fillStyle=navy; x.fillRect(0,0,W,210);
+  x.fillStyle='#ffffff'; x.font='700 46px Arial'; x.fillText(title,P,72);
+  x.font='24px Arial'; x.fillText(subtitle,P,116);
+  x.font='700 25px Arial'; x.fillText(opsReportDateLabel(dateValue),P,166);
+  x.textAlign='right'; x.fillText('SHIFT '+(shiftValue||'-'),W-P,166); x.textAlign='left';
+
+  let accent=green, pale=paleGreen;
+  if(statusLevel==='red'){accent=red;pale=paleRed}
+  else if(statusLevel==='orange'){accent=orange;pale=paleOrange}
+
+  x.fillStyle='#ffffff'; x.beginPath(); x.roundRect(P,250,W-2*P,220,22); x.fill();
+  x.fillStyle=pale; x.beginPath(); x.roundRect(P+24,274,W-2*P-48,172,18); x.fill();
+  x.fillStyle=accent; x.font='700 25px Arial'; x.fillText(resultLabel,P+54,323);
+  x.fillStyle=text; x.font='700 64px Arial'; x.fillText(resultValue+' '+resultUnit,P+54,397);
+  x.textAlign='right'; x.fillStyle=accent; x.font='700 26px Arial'; x.fillText(statusText,W-P-54,361); x.textAlign='left';
+
+  const top=510, boxH=690;
+  x.fillStyle='#ffffff'; x.beginPath(); x.roundRect(P,top,W-2*P,boxH,22); x.fill();
+  x.fillStyle=navy; x.font='700 27px Arial'; x.fillText('MEASUREMENT & RESULT',P+30,top+52);
+
+  let y=top+96;
+  rows.forEach((r,i)=>{
+    x.fillStyle=i%2===0?'#f8fafc':'#ffffff';
+    x.fillRect(P+24,y-34,W-2*P-48,66);
+    x.fillStyle=muted; x.font='22px Arial'; x.fillText(r[0],P+48,y+7);
+    x.textAlign='right'; x.fillStyle=text; x.font='700 24px Arial';
+    const val=(r[1]===null||r[1]===undefined||r[1]==='')?'-':String(r[1])+(r[2]?' '+r[2]:'');
+    x.fillText(val,W-P-48,y+7);
+    x.textAlign='left';
+    y+=72;
+  });
+
+  x.fillStyle=line; x.fillRect(P,H-122,W-2*P,1);
+  x.fillStyle=muted; x.font='18px Arial';
+  x.fillText('Generated by Production Capacity Calculator V5.1',P,H-76);
+  x.textAlign='right'; x.fillText('Production Department',W-P,H-76); x.textAlign='left';
+  return c;
+}
+function canvasToPngBlob(canvas){
+  return new Promise((resolve,reject)=>{
+    canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create PNG')),'image/png',0.95);
+  });
+}
+async function shareOrSaveOpsImage(canvas, filename, shareTitle, statusElementId, saveOnly=false){
+  try{
+    const blob=await canvasToPngBlob(canvas);
+    if(!saveOnly){
+      const file=new File([blob],filename,{type:'image/png'});
+      try{
+        if(navigator.canShare && navigator.canShare({files:[file]})){
+          await navigator.share({title:shareTitle,files:[file]});
+          if($(statusElementId))$(statusElementId).textContent='Shared report image ✓';
+          return;
+        }
+      }catch(e){
+        if(e && e.name==='AbortError')return;
+      }
+    }
+    saveBlob(blob,filename);
+    if($(statusElementId))$(statusElementId).textContent=saveOnly?'Saved PNG ✓':'Share not supported — PNG saved instead';
+  }catch(e){
+    if($(statusElementId))$(statusElementId).textContent='Unable to create report image';
+  }
+}
+function makeGlueReportCanvas(){
+  const r=calculateGlue(); if(!r)return null;
+  const date=$('g_date').value||new Date().toISOString().slice(0,10);
+  const shift=$('g_shift').value||'-';
+  const diff=r.diff===null?'-':(r.diff>=0?'+':'')+r.diff.toFixed(2);
+  const bad=r.diff!==null && Math.abs(r.diff)>0.30;
+  const rows=[
+    ['Solid',r.solid.toFixed(2),'%'],
+    ['Density',r.density.toFixed(2),'g/ml'],
+    ['Fiber Screw',r.fiber.toFixed(1),'kg/min'],
+    ['Actual capture time',r.actual.toFixed(2),'sec'],
+    ['Reference time',r.refSec.toFixed(0),'sec'],
+    ['Container volume',r.volumeL.toFixed(1),'L'],
+    ['Wet glue flow',r.wet.toFixed(2),'kg/min'],
+    ['Glue solid flow',r.dry.toFixed(2),'kg/min'],
+    ['Glue Set',r.set===null?'-':r.set.toFixed(2),'%'],
+    ['Diff from Set',diff,'% point']
+  ];
+  return opsReportCanvas('GLUE FLOW REPORT','Shift Operator Check',date,shift,rows,'GLUE RESULT',r.pct.toFixed(2),'%',bad?'red':'green',bad?'OUT OF RANGE':'NORMAL');
+}
+async function saveGlueReportImage(){
+  const c=makeGlueReportCanvas(); if(!c)return;
+  const d=$('g_date').value||'report',s=$('g_shift').value||'-';
+  await shareOrSaveOpsImage(c,`Glue_Flow_${d}_Shift_${s}.png`,'Glue Flow Report','g_status',true);
+}
+async function shareGlueReportImage(){
+  const c=makeGlueReportCanvas(); if(!c)return;
+  const d=$('g_date').value||'report',s=$('g_shift').value||'-';
+  await shareOrSaveOpsImage(c,`Glue_Flow_${d}_Shift_${s}.png`,'Glue Flow Report','g_status',false);
+}
+function makeSifterReportCanvas(){
+  const r=calculateSifter(); if(!r)return null;
+  const date=$('s_date').value||new Date().toISOString().slice(0,10);
+  const shift=$('s_shift').value||'-';
+  let statusLevel='green',statusText='NORMAL';
+  if(r.pct>1.00){statusLevel='red';statusText='HIGH'}
+  else if(r.pct>0.50){statusLevel='orange';statusText='WARNING'}
+  const rows=[
+    ['Refiner production',r.refiner.toFixed(2),'t/hr'],
+    ['Press performance',r.press===null?'-':r.press.toFixed(2),'m³/hr'],
+    ['Sifter 1',r.s1.toFixed(3),'kg/min'],
+    ['Sifter 2',r.s2.toFixed(3),'kg/min'],
+    ['Sifter 1 calculated',r.h1.toFixed(3),'kg/hr'],
+    ['Sifter 2 calculated',r.h2.toFixed(3),'kg/hr'],
+    ['Total drop',r.total.toFixed(5),'t/hr'],
+    ['SEC Set',r.sec===null?'-':r.sec.toFixed(1),'kWh/t']
+  ];
+  return opsReportCanvas('SIFTER OPERATOR REPORT','Shift Operator Check',date,shift,rows,'SIFTER RESULT',r.pct.toFixed(2),'%',statusLevel,statusText);
+}
+async function saveSifterReportImage(){
+  const c=makeSifterReportCanvas(); if(!c)return;
+  const d=$('s_date').value||'report',s=$('s_shift').value||'-';
+  await shareOrSaveOpsImage(c,`Sifter_${d}_Shift_${s}.png`,'Sifter Operator Report','s_status',true);
+}
+async function shareSifterReportImage(){
+  const c=makeSifterReportCanvas(); if(!c)return;
+  const d=$('s_date').value||'report',s=$('s_shift').value||'-';
+  await shareOrSaveOpsImage(c,`Sifter_${d}_Shift_${s}.png`,'Sifter Operator Report','s_status',false);
 }
 
 
