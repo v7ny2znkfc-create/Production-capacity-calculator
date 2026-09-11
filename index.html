@@ -158,6 +158,12 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 }
 @media(max-width:460px){.recipe-grid{grid-template-columns:1fr}}
 
+.db-status{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid #cbd5e1;background:#f8fafc;color:#475569}
+.db-status.ok{background:#ecfdf5;border-color:#a7f3d0;color:#065f46}.db-status.warn{background:#fff7ed;border-color:#fdba74;color:#9a3412}.db-status.err{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+.master-table-wrap{overflow-x:auto;border:1px solid #e2e8f0;border-radius:12px;margin-top:12px}.master-table{width:100%;border-collapse:collapse;min-width:760px;font-size:13px}.master-table th,.master-table td{padding:10px;border-bottom:1px solid #e2e8f0;text-align:left}.master-table th{background:#f8fafc;font-weight:900}.master-table tr:last-child td{border-bottom:0}
+.db-login{margin-top:14px;padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:#f8fafc}.db-login .grid{grid-template-columns:repeat(2,1fr)}
+@media(max-width:760px){.db-login .grid{grid-template-columns:1fr}}
+
 .footer{text-align:center;color:#64748b;font-size:12px;margin:15px 0 4px}
 @media(max-width:760px){
   .tabs{grid-template-columns:repeat(2,1fr)}
@@ -172,7 +178,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.2.1 PWA</div>
+    <div class="version">V5.3 PWA • Supabase Master Data Phase 1</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -239,7 +245,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="home-menu">
       <button class="home-link" onclick="goPage('v')"><strong>Volume</strong><span>Volume / Quantity</span></button>
       <button class="home-link" onclick="goPage('c')"><strong>Capacity</strong><span>Capacity / Speed</span></button>
-      <button class="home-link" onclick="goPage('p')"><strong>Press Factor</strong><span>Press length 28.41 m</span></button>
+      <button class="home-link" onclick="goPage('p')"><strong>Press Factor</strong><span id="home_press_length_text">Press length 28.41 m</span></button>
       <button class="home-link" onclick="goPage('t')"><strong>Production Time</strong><span>Target / Capacity / Time</span></button>
       <button class="home-link" onclick="goPage('gt')"><strong>Glue Tank</strong><span>Tank quantity & remaining time</span></button>
     </div>
@@ -249,6 +255,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <button class="home-link" onclick="goPage('r')"><strong>Refiner Plate Record</strong><span>ประวัติ Plate และ SEC</span></button>
       <button class="home-link" onclick="goPage('rec')"><strong>Recipe Library</strong><span>Standard parameter by thickness</span></button>
       <button class="home-link" onclick="goPage('d')"><strong>Daily Report</strong><span>PD1 running & Major DT</span></button>
+      <button class="home-link" onclick="goPage('md')"><strong>Shared Master Data</strong><span>Supabase status & factory standards</span></button>
     </div>
   </div></section>
 
@@ -291,7 +298,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 
   <section id="p" class="panel"><div class="card">
     <h2>Press Factor Solver</h2>
-    <div class="help">Press Length ถูกกำหนดคงที่ที่ 28.41 m • กรอก 2 ค่า และเว้นค่าที่ต้องการหา 1 ช่อง</div>
+    <div id="p_help" class="help">Press Length ถูกกำหนดคงที่ที่ 28.41 m • กรอก 2 ค่า และเว้นค่าที่ต้องการหา 1 ช่อง</div>
     <div class="grid">
       <div><label>Thickness</label><div class="iw"><input id="p_t" inputmode="decimal" type="number" step="any"><span class="unit">mm</span></div></div>
       <div><label>Speed</label><div class="iw"><input id="p_sp" inputmode="decimal" type="number" step="any"><span class="unit">mm/s</span></div></div>
@@ -304,7 +311,8 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <button class="btn secondary" onclick="exP()">Example</button>
     </div>
     <div id="p_status" class="status">พร้อมคำนวณ</div>
-    <div class="formula">Press Factor = (28.41 × 1000) ÷ (SP × T)</div>
+    <div id="p_formula" class="formula">Press Factor = (28.41 × 1000) ÷ (SP × T)</div>
+    <div style="margin-top:10px"><span id="p_master_source" class="db-status warn">Master Data: Local fallback</span></div>
   </div></section>
 
   <section id="t" class="panel"><div class="card">
@@ -657,11 +665,179 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
   </div></section>
 
-  <div class="footer">V5.2.1 • Production Dashboard • Production Shift 1 Tools</div>
+
+  <section id="md" class="panel"><div class="card">
+    <div class="back-home"><button class="btn secondary" type="button" onclick="goPage('h')">← Home</button></div>
+    <h2>Shared Master Data</h2>
+    <div class="help">ค่ากลางของโรงงานโหลดจาก Supabase เมื่อเชื่อมต่อได้ ส่วน Calculator ยังทำงานใน Browser ตามเดิม ถ้า Database ใช้งานไม่ได้ Press Factor จะ fallback ที่ 28.41 m เพื่อไม่ให้ Calculator หยุดทำงาน</div>
+
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <span id="db_connection_badge" class="db-status warn">Database: Not configured</span>
+      <button class="btn secondary" type="button" onclick="loadMasterData(true)">Refresh from Database</button>
+    </div>
+    <div id="db_message" class="status">ใส่ Supabase URL และ Publishable key ใน <strong>config.js</strong> แล้วกด Refresh</div>
+
+    <h3 style="margin-top:22px">Shared Settings</h3>
+    <div class="master-table-wrap"><table class="master-table">
+      <thead><tr><th>Key</th><th>Value</th><th>Unit</th><th>Description</th><th>Source</th></tr></thead>
+      <tbody id="master_settings_body"><tr><td>press_length</td><td>28.41</td><td>m</td><td>Press length</td><td>Local fallback</td></tr></tbody>
+    </table></div>
+
+    <h3 style="margin-top:22px">Product / Thickness Master</h3>
+    <div class="record-note">Phase 1 สร้างโครงสร้าง Database ให้แล้ว โดยค่า Product Master ตั้งเป็น <strong>authenticated read</strong> ไว้ก่อนเพื่อไม่เปิดข้อมูล Production ให้สาธารณะ ถ้าบริษัทอนุมัติให้ Operator อ่านแบบไม่ Login ค่อยเปิด anon SELECT ภายหลัง</div>
+    <div class="master-table-wrap"><table class="master-table">
+      <thead><tr><th>Product</th><th>Nominal T.</th><th>Press T.</th><th>Density</th><th>PF</th><th>Std. Speed</th></tr></thead>
+      <tbody id="product_master_body"><tr><td colspan="6">Login Database Admin เพื่ออ่าน Product Master</td></tr></tbody>
+    </table></div>
+
+    <div class="db-login">
+      <h3 style="margin-top:0">Database Admin</h3>
+      <div class="record-note" style="margin-bottom:10px">Login นี้เป็น Supabase Authentication สำหรับแก้ Shared Master Data และแยกจาก Admin PIN เดิมของข้อมูล local ในแอป</div>
+      <div class="grid">
+        <div><label>Email</label><input id="db_admin_email" type="email" autocomplete="username" placeholder="admin@company.com"></div>
+        <div><label>Password</label><input id="db_admin_password" type="password" autocomplete="current-password" placeholder="Supabase password"></div>
+      </div>
+      <div class="buttons">
+        <button id="db_login_btn" class="btn primary" type="button" onclick="dbAdminLogin()">Database Login</button>
+        <button id="db_logout_btn" class="btn secondary admin-hidden" type="button" onclick="dbAdminLogout()">Logout</button>
+      </div>
+      <div id="db_admin_status" class="status">Not signed in</div>
+
+      <div id="db_admin_editor" class="admin-hidden" style="margin-top:14px">
+        <h3>Edit Press Length</h3>
+        <div class="grid">
+          <div><label>Press Length</label><div class="iw"><input id="db_press_length" type="number" step="0.01" value="28.41"><span class="unit">m</span></div></div>
+        </div>
+        <div class="buttons"><button class="btn primary" type="button" onclick="savePressLengthToDatabase()">Save to Supabase</button></div>
+        <div class="record-note">เมื่อ Save สำเร็จ เครื่องอื่นจะเห็นค่าใหม่เมื่อเปิด/Refresh แอป โดยไม่ต้อง Deploy GitHub ใหม่</div>
+      </div>
+    </div>
+  </div></section>
+
+  <div class="footer">V5.3 • Supabase Master Data Phase 1 • Production Shift 1 Tools</div>
 </div>
 
+<script src="./config.js"></script>
 <script>
 const $=x=>document.getElementById(x);
+
+// ---------- Supabase Shared Master Data (V5.3 Phase 1) ----------
+const DEFAULT_PRESS_LENGTH=28.41;
+const PROD_DB={pressLength:DEFAULT_PRESS_LENGTH,settings:[],products:[],connected:false,lastError:'',user:null};
+const DB_SESSION_KEY='production_cal_supabase_session_v1';
+
+function dbConfig(){
+  const c=window.PRODUCTION_CAL_CONFIG||{};
+  return {url:String(c.supabaseUrl||'').replace(/\/$/,''),key:String(c.supabasePublishableKey||c.supabaseAnonKey||'')};
+}
+function dbConfigured(){const c=dbConfig();return /^https:\/\//.test(c.url)&&c.key.length>20;}
+function dbHeaders(userToken='',extra={}){
+  const c=dbConfig();
+  const h={apikey:c.key,...extra};
+  if(userToken)h.Authorization='Bearer '+userToken;
+  return h;
+}
+function getDbSession(){
+  try{const x=JSON.parse(sessionStorage.getItem(DB_SESSION_KEY)||'null');return x&&x.access_token?x:null}catch{return null}
+}
+function setDbSession(x){if(x)sessionStorage.setItem(DB_SESSION_KEY,JSON.stringify(x));else sessionStorage.removeItem(DB_SESSION_KEY);updateDbAdminUI();}
+function setDbBadge(text,kind='warn'){
+  const b=$('db_connection_badge');if(b){b.textContent=text;b.className='db-status '+kind;}
+}
+function applyPressLength(value,source='Local fallback'){
+  const n=Number(value);PROD_DB.pressLength=Number.isFinite(n)&&n>0?n:DEFAULT_PRESS_LENGTH;
+  if($('p_l'))$('p_l').value=String(PROD_DB.pressLength);
+  if($('p_help'))$('p_help').textContent=`Press Length ถูกกำหนดจาก Master Data ที่ ${PROD_DB.pressLength} m • กรอก 2 ค่า และเว้นค่าที่ต้องการหา 1 ช่อง`;
+  if($('p_formula'))$('p_formula').textContent=`Press Factor = (${PROD_DB.pressLength} × 1000) ÷ (SP × T)`;
+  if($('home_press_length_text'))$('home_press_length_text').textContent=`Press length ${PROD_DB.pressLength} m`;
+  const s=$('p_master_source');if(s){s.textContent='Master Data: '+source;s.className='db-status '+(source==='Supabase'?'ok':'warn');}
+  if($('db_press_length'))$('db_press_length').value=String(PROD_DB.pressLength);
+}
+function renderMasterSettings(){
+  const body=$('master_settings_body');if(!body)return;
+  const rows=PROD_DB.settings.length?PROD_DB.settings:[{setting_key:'press_length',setting_value:String(PROD_DB.pressLength),unit:'m',description:'Press length',_source:'Local fallback'}];
+  body.innerHTML=rows.map(x=>`<tr><td><strong>${escapeHtml(String(x.setting_key||''))}</strong></td><td>${escapeHtml(String(x.setting_value??''))}</td><td>${escapeHtml(String(x.unit||''))}</td><td>${escapeHtml(String(x.description||''))}</td><td>${x._source||'Supabase'}</td></tr>`).join('');
+}
+function renderProductMaster(){
+  const body=$('product_master_body');if(!body)return;
+  if(!PROD_DB.products.length){body.innerHTML='<tr><td colspan="6">ยังไม่มีข้อมูล หรือบัญชีนี้ไม่มีสิทธิ์อ่าน Product Master</td></tr>';return;}
+  body.innerHTML=PROD_DB.products.map(x=>`<tr><td><strong>${escapeHtml(String(x.product_name||''))}</strong></td><td>${x.nominal_thickness_mm??'-'}</td><td>${x.press_thickness_mm??'-'}</td><td>${x.density_target_kg_m3??'-'}</td><td>${x.press_factor??'-'}</td><td>${x.standard_speed_mm_s??'-'}</td></tr>`).join('');
+}
+async function loadProductMaster(){
+  if(!dbConfigured())return;
+  const c=dbConfig(),s=getDbSession();
+  const token=s?.access_token||'';
+  try{
+    const r=await fetch(`${c.url}/rest/v1/production_product_master?select=*&is_active=eq.true&order=sort_order.asc,product_name.asc`,{headers:dbHeaders(token),cache:'no-store'});
+    if(!r.ok){PROD_DB.products=[];renderProductMaster();return;}
+    PROD_DB.products=await r.json();renderProductMaster();
+  }catch{PROD_DB.products=[];renderProductMaster();}
+}
+async function loadMasterData(showMessage=false){
+  if(!dbConfigured()){
+    PROD_DB.connected=false;PROD_DB.settings=[];applyPressLength(DEFAULT_PRESS_LENGTH,'Local fallback');renderMasterSettings();renderProductMaster();
+    setDbBadge('Database: Not configured','warn');
+    if($('db_message'))$('db_message').innerHTML='ใส่ Supabase URL และ Publishable key ใน <strong>config.js</strong> แล้วกด Refresh';
+    return false;
+  }
+  const c=dbConfig();setDbBadge('Database: Connecting…','warn');
+  try{
+    const r=await fetch(`${c.url}/rest/v1/production_cal_settings?select=*&order=setting_key.asc`,{headers:dbHeaders(),cache:'no-store'});
+    if(!r.ok)throw new Error(`HTTP ${r.status} ${await r.text()}`);
+    const rows=await r.json();
+    PROD_DB.settings=rows.map(x=>({...x,_source:'Supabase'}));PROD_DB.connected=true;PROD_DB.lastError='';
+    const press=rows.find(x=>x.setting_key==='press_length');applyPressLength(press?.setting_value??DEFAULT_PRESS_LENGTH,'Supabase');
+    renderMasterSettings();setDbBadge('Database: Connected','ok');
+    if($('db_message'))$('db_message').innerHTML=`Loaded <strong>${rows.length}</strong> shared setting(s) from Supabase`;
+    await loadProductMaster();
+    if(showMessage&&$('db_message'))$('db_message').scrollIntoView({behavior:'smooth',block:'nearest'});
+    return true;
+  }catch(e){
+    PROD_DB.connected=false;PROD_DB.lastError=String(e?.message||e);PROD_DB.settings=[];applyPressLength(DEFAULT_PRESS_LENGTH,'Local fallback');renderMasterSettings();
+    setDbBadge('Database: Offline / blocked','err');
+    if($('db_message'))$('db_message').textContent='โหลด Database ไม่สำเร็จ • Calculator ยังใช้ค่า fallback 28.41 m • '+PROD_DB.lastError;
+    return false;
+  }
+}
+async function dbAdminLogin(){
+  if(!dbConfigured()){alert('กรุณาตั้งค่า config.js ก่อน');return;}
+  const email=String($('db_admin_email')?.value||'').trim(),password=String($('db_admin_password')?.value||'');
+  if(!email||!password){alert('กรุณากรอก Email และ Password');return;}
+  const c=dbConfig();
+  try{
+    const r=await fetch(`${c.url}/auth/v1/token?grant_type=password`,{method:'POST',headers:dbHeaders('',{'Content-Type':'application/json'}),body:JSON.stringify({email,password}),cache:'no-store'});
+    const x=await r.json();if(!r.ok||!x.access_token)throw new Error(x.error_description||x.msg||x.error||`HTTP ${r.status}`);
+    setDbSession({access_token:x.access_token,refresh_token:x.refresh_token||'',expires_at:Date.now()+Number(x.expires_in||3600)*1000,user:x.user||null});
+    PROD_DB.user=x.user||null;if($('db_admin_password'))$('db_admin_password').value='';
+    await loadMasterData();
+  }catch(e){alert('Database Login ไม่สำเร็จ: '+String(e?.message||e));}
+}
+async function dbAdminLogout(){setDbSession(null);PROD_DB.user=null;PROD_DB.products=[];renderProductMaster();await loadMasterData();}
+function updateDbAdminUI(){
+  const s=getDbSession(),on=!!s;
+  if($('db_login_btn'))$('db_login_btn').classList.toggle('admin-hidden',on);
+  if($('db_logout_btn'))$('db_logout_btn').classList.toggle('admin-hidden',!on);
+  if($('db_admin_editor'))$('db_admin_editor').classList.toggle('admin-hidden',!on);
+  if($('db_admin_status')){
+    $('db_admin_status').className='status '+(on?'good':'');
+    $('db_admin_status').textContent=on?'Supabase authenticated • Shared Master edit enabled':'Not signed in';
+  }
+}
+async function savePressLengthToDatabase(){
+  const s=getDbSession();if(!s){alert('กรุณา Database Login ก่อน');return;}
+  const n=Number($('db_press_length')?.value);if(!Number.isFinite(n)||n<=0){alert('Press Length ต้องมากกว่า 0');return;}
+  const c=dbConfig();
+  try{
+    const body={setting_value:String(n),updated_at:new Date().toISOString()};
+    if(s.user?.id)body.updated_by=s.user.id;
+    const r=await fetch(`${c.url}/rest/v1/production_cal_settings?setting_key=eq.press_length`,{method:'PATCH',headers:dbHeaders(s.access_token,{'Content-Type':'application/json','Prefer':'return=representation'}),body:JSON.stringify(body),cache:'no-store'});
+    const txt=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${txt}`);
+    await loadMasterData();
+    if($('db_message'))$('db_message').innerHTML=`Saved Press Length = <strong>${n} m</strong> to Supabase`;
+  }catch(e){alert('Save ไม่สำเร็จ: '+String(e?.message||e));}
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));}
 const G={
   v:['v_t','v_w','v_l','v_n','v_cap'],
   c:['c_t','c_w','c_sp','c_cap'],
@@ -705,7 +881,7 @@ function ans(g,id,n,label,u){
 }
 function clearG(g){
   G[g].forEach(x=>{$(x).value='';$(x).classList.remove('solved')});
-  if(g==='p') $('p_l').value='28.41';
+  if(g==='p') $('p_l').value=String(PROD_DB.pressLength||DEFAULT_PRESS_LENGTH);
   status(g,'พร้อมคำนวณ');
   if(g==='t') $('time_detail').style.display='none';
 }
@@ -729,7 +905,7 @@ function solveC(){
 function solveP(){
   const m=check('p'); if(!m)return;
   const T=val('p_t'),S=val('p_sp'),P=val('p_pf');
-  const L=28.41;
+  const L=Number(PROD_DB.pressLength)||DEFAULT_PRESS_LENGTH;
   if(m==='p_pf') ans('p',m,L*1000/(S*T),'Press Factor','s/mm');
   else if(m==='p_sp') ans('p',m,L*1000/(P*T),'Speed','mm/s');
   else ans('p',m,L*1000/(P*S),'Thickness','mm');
@@ -1273,6 +1449,7 @@ function goPage(id){
   if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
   if(id==='d')initDailyReport();
   if(id==='gt')calcGlueTank();
+  if(id==='md'){updateDbAdminUI();renderMasterSettings();renderProductMaster();loadMasterData();}
   if(id==='h')refreshHomeDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1350,6 +1527,9 @@ if($('g_shift'))$('g_shift').value=getHomeShift();
 if($('s_shift'))$('s_shift').value=getHomeShift();
 refreshHomeDashboard();
 initRecipeLibrary();
+updateDbAdminUI();
+applyPressLength(DEFAULT_PRESS_LENGTH,'Local fallback');
+loadMasterData();
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
