@@ -178,7 +178,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.4 PWA • Supabase Cloud Reports</div>
+    <div class="version">V5.5 PWA • Operator Cloud Dashboard & History</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -193,6 +193,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <button class="tab" data-tab="rec">8. Recipe</button>
     <button class="tab" data-tab="d">9. Daily Report</button>
     <button class="tab" data-tab="gt">10. Glue Tank</button>
+    <button class="tab" data-tab="hist">11. Report History</button>
   </div>
 
   <section id="h" class="panel active"><div class="card">
@@ -255,6 +256,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <button class="home-link" onclick="goPage('r')"><strong>Refiner Plate Record</strong><span>ประวัติ Plate และ SEC</span></button>
       <button class="home-link" onclick="goPage('rec')"><strong>Recipe Library</strong><span>Standard parameter by thickness</span></button>
       <button class="home-link" onclick="goPage('d')"><strong>Daily Report</strong><span>PD1 running & Major DT</span></button>
+      <button class="home-link" onclick="goPage('hist')"><strong>Report History</strong><span>Glue Flow • Sifter • Daily Report</span></button>
       <button class="home-link" onclick="goPage('md')"><strong>Shared Master Data</strong><span>Supabase status & factory standards</span></button>
     </div>
   </div></section>
@@ -444,12 +446,12 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="settings-box" style="margin-top:18px">
       <strong>Cloud Report Database</strong>
       <div id="g_cloud_status" class="status" style="margin-top:8px">Checking database session…</div>
-      <div class="buttons"><button class="btn secondary" type="button" onclick="refreshCloudReportHistory('g')">Refresh Cloud History</button><button class="btn secondary" type="button" onclick="goPage('md')">Database Login</button></div>
+      <div class="buttons"><button class="btn secondary" type="button" onclick="refreshCloudReportHistory('g')">Refresh Cloud History</button><button class="btn secondary" type="button" onclick="goPage('hist')">Open All Report History</button></div>
     </div>
     <h3 style="margin-top:20px">Shared Report History (Database)</h3>
     <div class="shift-table-wrap"><table class="shift-table">
-      <thead><tr><th>Date/Time</th><th>Shift</th><th>Glue %</th><th>Set %</th><th>Diff</th><th>Status</th><th>Operator</th><th>Action</th></tr></thead>
-      <tbody id="g_cloud_body"><tr><td colspan="8">Database Login เพื่อดู Shared History</td></tr></tbody>
+      <thead><tr><th>Date/Time</th><th>Shift</th><th>Glue %</th><th>Set %</th><th>Diff</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="g_cloud_body"><tr><td colspan="7">กำลังโหลด Shared History…</td></tr></tbody>
     </table></div>
 
     <h3 style="margin-top:20px">Shift Records (this device)</h3>
@@ -498,12 +500,12 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div class="settings-box" style="margin-top:18px">
       <strong>Cloud Report Database</strong>
       <div id="s_cloud_status" class="status" style="margin-top:8px">Checking database session…</div>
-      <div class="buttons"><button class="btn secondary" type="button" onclick="refreshCloudReportHistory('s')">Refresh Cloud History</button><button class="btn secondary" type="button" onclick="goPage('md')">Database Login</button></div>
+      <div class="buttons"><button class="btn secondary" type="button" onclick="refreshCloudReportHistory('s')">Refresh Cloud History</button><button class="btn secondary" type="button" onclick="goPage('hist')">Open All Report History</button></div>
     </div>
     <h3 style="margin-top:20px">Shared Report History (Database)</h3>
     <div class="shift-table-wrap"><table class="shift-table">
-      <thead><tr><th>Date/Time</th><th>Shift</th><th>Sifter %</th><th>Total t/hr</th><th>Status</th><th>Operator</th><th>Action</th></tr></thead>
-      <tbody id="s_cloud_body"><tr><td colspan="7">Database Login เพื่อดู Shared History</td></tr></tbody>
+      <thead><tr><th>Date/Time</th><th>Shift</th><th>Sifter %</th><th>Total t/hr</th><th>Status</th><th>Action</th></tr></thead>
+      <tbody id="s_cloud_body"><tr><td colspan="6">กำลังโหลด Shared History…</td></tr></tbody>
     </table></div>
 
     <h3 style="margin-top:20px">Shift Records (this device)</h3>
@@ -632,6 +634,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <h3>Production Summary</h3>
     <div class="grid">
       <div><label>Report Date</label><input id="d_date" type="date"></div>
+      <div><label>Shift</label><select id="d_shift" style="width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff"><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option></select></div>
       <div><label>Log stock (ton)</label><input id="d_log" type="number" step="any"></div>
       <div><label>Incoming Truck</label><input id="d_incoming" type="number" step="1"></div>
       <div><label>Waiting Truck</label><input id="d_waiting" type="number" step="1"></div>
@@ -685,6 +688,31 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <button class="btn secondary" type="button" onclick="newDailyReport()">New / Clear</button>
     </div>
     <div id="d_status" class="status">พร้อมกรอก Daily Report</div>
+    <div id="d_cloud_status" class="status">Cloud Report: ready • ผู้ใช้ทั่วไปบันทึกได้โดยไม่ต้อง Login</div>
+  </div></section>
+
+
+  <section id="hist" class="panel"><div class="card">
+    <div class="back-home"><button class="btn secondary" type="button" onclick="goPage('h')">← Home</button></div>
+    <h2>Report History</h2>
+    <div class="help">ประวัติรายงานกลางจาก Supabase • ผู้ใช้ทั่วไปเปิดดูได้โดยไม่ต้อง Login • Filter ตามวันที่ กะ และประเภทรายงานได้</div>
+    <div class="grid">
+      <div><label>Date</label><input id="hist_date" type="date" onchange="renderCentralHistory()"></div>
+      <div><label>Shift</label><select id="hist_shift" onchange="renderCentralHistory()" style="width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff"><option value="ALL">All shifts</option><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option></select></div>
+      <div><label>Report Type</label><select id="hist_type" onchange="renderCentralHistory()" style="width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff"><option value="ALL">All reports</option><option value="GLUE">Glue Flow</option><option value="SIFTER">Sifter</option><option value="DAILY">Daily Report</option></select></div>
+    </div>
+    <div class="buttons">
+      <button class="btn primary" type="button" onclick="loadCentralReportHistory()">Refresh from Database</button>
+      <button class="btn secondary" type="button" onclick="clearHistoryFilters()">Show All</button>
+    </div>
+    <div id="hist_status" class="status">กำลังโหลด Report History…</div>
+    <div class="record-table-wrap"><table class="record-table" style="min-width:900px">
+      <thead><tr><th>Date/Time</th><th>Type</th><th>Shift</th><th>Main Result</th><th>Status</th><th>Action</th><th>Detail</th></tr></thead>
+      <tbody id="hist_body"><tr><td colspan="7">กำลังโหลด…</td></tr></tbody>
+    </table></div>
+    <dialog id="hist_dialog" style="width:min(760px,92vw);border:0;border-radius:16px;padding:0;box-shadow:0 24px 70px rgba(0,0,0,.25)">
+      <div style="padding:20px 22px"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center"><h3 id="hist_dialog_title" style="margin:0">Report Detail</h3><button class="btn secondary" type="button" onclick="$('hist_dialog').close()">Close</button></div><div id="hist_dialog_body" style="margin-top:16px"></div></div>
+    </dialog>
   </div></section>
 
 
@@ -736,7 +764,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V5.4 • Supabase Cloud Reports • Production Shift 1 Tools</div>
+  <div class="footer">V5.5 • Operator Cloud Dashboard & Report History • Production Shift 1 Tools</div>
 </div>
 
 <script src="./config.js"></script>
@@ -1199,10 +1227,10 @@ function exportRefinerCSV(){
 }
 
 
-// ---------- Cloud Report Database (V5.4) ----------
-const APP_VERSION='5.4';
-function cloudUserLabel(){const s=getDbSession();return s?.user?.email||s?.user?.id||'-';}
-function cloudSessionReady(){const s=getDbSession();return !!(dbConfigured()&&s?.access_token);}
+// ---------- Cloud Report Database (V5.5 Public Operator Workflow) ----------
+const APP_VERSION='5.5';
+function cloudUserLabel(){const s=getDbSession();return s?.user?.email||'Public user';}
+function cloudReady(){return dbConfigured();}
 function setCloudStatus(kind,msg,cls=''){
   const el=$(kind+'_cloud_status');if(!el)return;
   el.className='status'+(cls?' '+cls:'');el.textContent=msg;
@@ -1213,56 +1241,62 @@ function reportKey(prefix,date,shift,values){
   return `${prefix}-${date}-${shift}-${(h>>>0).toString(16)}`;
 }
 async function dbUpsert(table,row){
-  const s=getDbSession();if(!s?.access_token)throw new Error('Database Login required');
-  const c=dbConfig();
+  if(!dbConfigured())throw new Error('Database not configured');
+  const s=getDbSession(),c=dbConfig(),token=s?.access_token||'';
   const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=report_key`,{
-    method:'POST',headers:dbHeaders(s.access_token,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'}),
+    method:'POST',headers:dbHeaders(token,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'}),
     body:JSON.stringify(row),cache:'no-store'
   });
   const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);
   try{return JSON.parse(text)}catch{return []}
 }
 function glueCloudRow(r,action='save'){
-  const date=$('g_date').value||new Date().toISOString().slice(0,10),shift=$('g_shift').value||'-',s=getDbSession();
+  const date=$('g_date').value||todayISO(),shift=$('g_shift').value||'-',sess=getDbSession();
   const bad=r.diff!==null&&Math.abs(r.diff)>0.30;
-  return {report_key:reportKey('glue',date,shift,[s?.user?.id||'',r.solid,r.density,r.fiber,r.actual,r.set,r.refSec,r.volumeL]),report_date:date,shift,
+  return {report_key:reportKey('glue',date,shift,[r.solid,r.density,r.fiber,r.actual,r.set,r.refSec,r.volumeL]),report_date:date,shift,
     solid_pct:r.solid,density_g_ml:r.density,fiber_screw_kg_min:r.fiber,actual_capture_sec:r.actual,glue_set_pct:r.set,
     wet_glue_kg_min:r.wet,dry_glue_kg_min:r.dry,glue_result_pct:r.pct,diff_pct_point:r.diff,reference_sec:r.refSec,container_l:r.volumeL,
-    result_status:bad?'OUT_OF_RANGE':'NORMAL',last_action:action,operator_email:s?.user?.email||null,created_by:s?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+    result_status:bad?'OUT_OF_RANGE':'NORMAL',last_action:action,operator_email:null,created_by:sess?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
 }
 function sifterCloudRow(r,action='save'){
-  const date=$('s_date').value||new Date().toISOString().slice(0,10),shift=$('s_shift').value||'-',s=getDbSession();
+  const date=$('s_date').value||todayISO(),shift=$('s_shift').value||'-',sess=getDbSession();
   const st=r.pct>1?'HIGH':r.pct>0.5?'WARNING':'NORMAL';
-  return {report_key:reportKey('sifter',date,shift,[s?.user?.id||'',r.refiner,r.press,r.s1,r.s2,r.sec]),report_date:date,shift,
+  return {report_key:reportKey('sifter',date,shift,[r.refiner,r.press,r.s1,r.s2,r.sec]),report_date:date,shift,
     refiner_tph:r.refiner,press_m3_hr:r.press,sifter1_kg_min:r.s1,sifter2_kg_min:r.s2,sifter1_kg_hr:r.h1,sifter2_kg_hr:r.h2,
-    total_drop_tph:r.total,sifter_pct:r.pct,sec_set_kwh_t:r.sec,result_status:st,last_action:action,operator_email:s?.user?.email||null,created_by:s?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+    total_drop_tph:r.total,sifter_pct:r.pct,sec_set_kwh_t:r.sec,result_status:st,last_action:action,operator_email:null,created_by:sess?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
 }
 async function saveGlueCloudReport(r,action='save',quiet=false){
-  if(!cloudSessionReady()){setCloudStatus('g','Cloud not saved • Database Login required','warn');return false;}
-  try{await dbUpsert('glue_flow_reports',glueCloudRow(r,action));setCloudStatus('g',`Saved to Database ✓ • ${action} • ${cloudUserLabel()}`,'good');await loadGlueCloudHistory();return true}
+  if(!cloudReady()){setCloudStatus('g','Cloud unavailable • saved only on this device','warn');return false;}
+  try{await dbUpsert('glue_flow_reports',glueCloudRow(r,action));setCloudStatus('g',`Saved to Database ✓ • ${action}`,'good');await loadGlueCloudHistory();refreshHomeDashboard();return true}
   catch(e){setCloudStatus('g','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
 }
 async function saveSifterCloudReport(r,action='save',quiet=false){
-  if(!cloudSessionReady()){setCloudStatus('s','Cloud not saved • Database Login required','warn');return false;}
-  try{await dbUpsert('sifter_reports',sifterCloudRow(r,action));setCloudStatus('s',`Saved to Database ✓ • ${action} • ${cloudUserLabel()}`,'good');await loadSifterCloudHistory();return true}
+  if(!cloudReady()){setCloudStatus('s','Cloud unavailable • saved only on this device','warn');return false;}
+  try{await dbUpsert('sifter_reports',sifterCloudRow(r,action));setCloudStatus('s',`Saved to Database ✓ • ${action}`,'good');await loadSifterCloudHistory();refreshHomeDashboard();return true}
   catch(e){setCloudStatus('s','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
 }
 function fmtCloudTime(x){try{return new Date(x).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}catch{return x||'-'}}
+async function publicSelect(table,query=''){
+  if(!dbConfigured())throw new Error('Database not configured');
+  const c=dbConfig(),s=getDbSession(),token=s?.access_token||'';
+  const r=await fetch(`${c.url}/rest/v1/${table}?${query}`,{headers:dbHeaders(token),cache:'no-store'});
+  const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);return JSON.parse(text||'[]');
+}
 async function loadGlueCloudHistory(){
   const body=$('g_cloud_body');if(!body)return;
-  if(!cloudSessionReady()){body.innerHTML='<tr><td colspan="8">Database Login เพื่อดู Shared History</td></tr>';setCloudStatus('g','Database Login required for Cloud Reports','warn');return;}
-  try{const c=dbConfig(),s=getDbSession();const r=await fetch(`${c.url}/rest/v1/glue_flow_reports?select=*&order=created_at.desc&limit=30`,{headers:dbHeaders(s.access_token),cache:'no-store'});const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);const rows=JSON.parse(text);
-    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.glue_result_pct,2)}</strong></td><td>${x.glue_set_pct===null?'-':rNum(x.glue_set_pct,2)}</td><td>${x.diff_pct_point===null?'-':((Number(x.diff_pct_point)>=0?'+':'')+Number(x.diff_pct_point).toFixed(2))}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.operator_email||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="8">ยังไม่มี Cloud Report</td></tr>';
-    setCloudStatus('g',`Cloud connected • ${rows.length} recent report(s) • ${cloudUserLabel()}`,'good');
-  }catch(e){body.innerHTML='<tr><td colspan="8">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('g','Cloud history failed • '+String(e?.message||e),'warn')}
+  if(!cloudReady()){body.innerHTML='<tr><td colspan="7">Database unavailable</td></tr>';setCloudStatus('g','Cloud unavailable','warn');return;}
+  try{const rows=await publicSelect('glue_flow_reports','select=*&order=created_at.desc&limit=30');
+    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.glue_result_pct,2)}</strong></td><td>${x.glue_set_pct===null?'-':rNum(x.glue_set_pct,2)}</td><td>${x.diff_pct_point===null?'-':((Number(x.diff_pct_point)>=0?'+':'')+Number(x.diff_pct_point).toFixed(2))}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="7">ยังไม่มี Cloud Report</td></tr>';
+    setCloudStatus('g',`Cloud connected • ${rows.length} recent report(s) • Login not required`,'good');
+  }catch(e){body.innerHTML='<tr><td colspan="7">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('g','Cloud history failed • '+String(e?.message||e),'warn')}
 }
 async function loadSifterCloudHistory(){
   const body=$('s_cloud_body');if(!body)return;
-  if(!cloudSessionReady()){body.innerHTML='<tr><td colspan="7">Database Login เพื่อดู Shared History</td></tr>';setCloudStatus('s','Database Login required for Cloud Reports','warn');return;}
-  try{const c=dbConfig(),s=getDbSession();const r=await fetch(`${c.url}/rest/v1/sifter_reports?select=*&order=created_at.desc&limit=30`,{headers:dbHeaders(s.access_token),cache:'no-store'});const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);const rows=JSON.parse(text);
-    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.sifter_pct,2)}</strong></td><td>${rNum(x.total_drop_tph,5)}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.operator_email||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="7">ยังไม่มี Cloud Report</td></tr>';
-    setCloudStatus('s',`Cloud connected • ${rows.length} recent report(s) • ${cloudUserLabel()}`,'good');
-  }catch(e){body.innerHTML='<tr><td colspan="7">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('s','Cloud history failed • '+String(e?.message||e),'warn')}
+  if(!cloudReady()){body.innerHTML='<tr><td colspan="6">Database unavailable</td></tr>';setCloudStatus('s','Cloud unavailable','warn');return;}
+  try{const rows=await publicSelect('sifter_reports','select=*&order=created_at.desc&limit=30');
+    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.sifter_pct,2)}</strong></td><td>${rNum(x.total_drop_tph,5)}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="6">ยังไม่มี Cloud Report</td></tr>';
+    setCloudStatus('s',`Cloud connected • ${rows.length} recent report(s) • Login not required`,'good');
+  }catch(e){body.innerHTML='<tr><td colspan="6">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('s','Cloud history failed • '+String(e?.message||e),'warn')}
 }
 async function refreshCloudReportHistory(kind){if(kind==='g')await loadGlueCloudHistory();else await loadSifterCloudHistory();}
 
@@ -1349,7 +1383,7 @@ async function saveGlueRecord(){
   localStorage.setItem(GLUE_RECORD_KEY,JSON.stringify(data.slice(0,200)));
   renderGlueRecords(); refreshHomeDashboard();
   const cloud=await saveGlueCloudReport(r,'save_record',true);
-  status('g',cloud?'บันทึก Glue Flow ในเครื่อง + Database แล้ว ✓':'บันทึกในเครื่องแล้ว • Cloud ต้อง Database Login',cloud?'good':'warn');
+  status('g',cloud?'บันทึก Glue Flow ในเครื่อง + Database แล้ว ✓':'บันทึกในเครื่องแล้ว • Cloud unavailable',cloud?'good':'warn');
 }
 function deleteGlueRecord(id){
   if(!requireAdmin())return;
@@ -1425,7 +1459,7 @@ async function saveSifterRecord(){
   localStorage.setItem(SIFTER_RECORD_KEY,JSON.stringify(data.slice(0,200)));
   renderSifterRecords(); refreshHomeDashboard();
   const cloud=await saveSifterCloudReport(r,'save_record',true);
-  status('s',cloud?'บันทึก Sifter ในเครื่อง + Database แล้ว ✓':'บันทึกในเครื่องแล้ว • Cloud ต้อง Database Login',cloud?'good':'warn');
+  status('s',cloud?'บันทึก Sifter ในเครื่อง + Database แล้ว ✓':'บันทึกในเครื่องแล้ว • Cloud unavailable',cloud?'good':'warn');
 }
 function deleteSifterRecord(id){
   if(!requireAdmin())return;
@@ -1555,6 +1589,7 @@ function goPage(id){
   if(id==='d')initDailyReport();
   if(id==='gt')calcGlueTank();
   if(id==='md'){updateDbAdminUI();renderMasterSettings();renderProductMaster();loadMasterData();}
+  if(id==='hist')loadCentralReportHistory();
   if(id==='h')refreshHomeDashboard();
   window.scrollTo({top:0,behavior:'smooth'});
 }
@@ -1566,53 +1601,38 @@ function setDashCard(id,kind){
   e.classList.remove('dash-ok','dash-warn','dash-danger','dash-neutral');
   e.classList.add(kind);
 }
-function refreshHomeDashboard(){
+async function refreshHomeDashboard(){
   if(!$('home_shift'))return;
   const shift=getHomeShift(), date=todayISO();
   $('home_shift').value=shift;
-
-  const g=latestShiftRecord(loadGlueRecords(),date,shift);
+  let g=null,sf=null,cloudOk=false;
+  $('dash_glue_sub').textContent='กำลังตรวจ Database…';$('dash_sifter_sub').textContent='กำลังตรวจ Database…';
+  try{
+    const q=`select=*&report_date=eq.${encodeURIComponent(date)}&shift=eq.${encodeURIComponent(shift)}&order=created_at.desc&limit=1`;
+    const [gr,sr]=await Promise.all([publicSelect('glue_flow_reports',q),publicSelect('sifter_reports',q)]);
+    g=gr[0]||null;sf=sr[0]||null;cloudOk=true;
+  }catch(e){
+    g=latestShiftRecord(loadGlueRecords(),date,shift);sf=latestShiftRecord(loadSifterRecords(),date,shift);
+  }
   if(g){
-    $('dash_glue_value').textContent=Number(g.pct).toFixed(2)+'%';
-    const d=g.diff===null?null:Number(g.diff);
-    $('dash_glue_sub').textContent=d===null?'Shift '+shift:`Diff from set ${(d>=0?'+':'')+d.toFixed(2)}%`;
+    const pct=Number(g.glue_result_pct??g.pct),d0=g.diff_pct_point??g.diff,d=d0===null||d0===undefined?null:Number(d0);
+    $('dash_glue_value').textContent=pct.toFixed(2)+'%';
+    $('dash_glue_sub').textContent=(cloudOk?'Cloud • ':'Local fallback • ')+(d===null?'Shift '+shift:`Diff ${(d>=0?'+':'')+d.toFixed(2)}% point`);
     setDashCard('dash_glue',d!==null&&Math.abs(d)>0.30?'dash-danger':'dash-ok');
   }else{
-    $('dash_glue_value').textContent='Pending';
-    $('dash_glue_sub').textContent='Shift '+shift+' • ยังไม่ได้บันทึกวันนี้';
-    setDashCard('dash_glue','dash-neutral');
+    $('dash_glue_value').textContent='Pending';$('dash_glue_sub').textContent='Shift '+shift+' • ยังไม่มีรายงานวันนี้';setDashCard('dash_glue','dash-neutral');
   }
-
-  const s=latestShiftRecord(loadSifterRecords(),date,shift);
-  if(s){
-    const p=Number(s.pct);
-    $('dash_sifter_value').textContent=p.toFixed(2)+'%';
-    $('dash_sifter_sub').textContent='Shift '+shift+' • Latest record';
+  if(sf){
+    const p=Number(sf.sifter_pct??sf.pct);$('dash_sifter_value').textContent=p.toFixed(2)+'%';
+    $('dash_sifter_sub').textContent=(cloudOk?'Cloud • ':'Local fallback • ')+'Shift '+shift+' • Complete';
     setDashCard('dash_sifter',p>1?'dash-danger':p>0.5?'dash-warn':'dash-ok');
   }else{
-    $('dash_sifter_value').textContent='Pending';
-    $('dash_sifter_sub').textContent='Shift '+shift+' • ยังไม่ได้บันทึกวันนี้';
-    setDashCard('dash_sifter','dash-neutral');
+    $('dash_sifter_value').textContent='Pending';$('dash_sifter_sub').textContent='Shift '+shift+' • ยังไม่มีรายงานวันนี้';setDashCard('dash_sifter','dash-neutral');
   }
-
   const ref=loadRefiner().filter(x=>x.change).sort((a,b)=>String(b.change).localeCompare(String(a.change)))[0];
-  if(ref){
-    const yr=String(ref.change).slice(0,4);
-    $('dash_refiner_value').textContent=`Set ${ref.setNo}/${yr}`;
-    if(!ref.remove){
-      const days=rDays(ref.change,'');
-      $('dash_refiner_sub').textContent=`In use • ${days} days`;
-      setDashCard('dash_refiner','dash-ok');
-    }else{
-      $('dash_refiner_sub').textContent='Latest recorded set';
-      setDashCard('dash_refiner','dash-neutral');
-    }
-  }
-
-  const complete=!!g&&!!s;
-  const box=$('shift_complete');
-  box.className='status '+(complete?'good':'warn');
-  box.innerHTML=complete?`<strong>Shift ${shift} Check Complete ✓</strong>`:`<strong>Shift ${shift} Check: Pending</strong> • ${!g?'Glue Flow ':''}${!s?'Sifter':''}`;
+  if(ref){const yr=String(ref.change).slice(0,4);$('dash_refiner_value').textContent=`Set ${ref.setNo}/${yr}`;if(!ref.remove){const days=rDays(ref.change,'');$('dash_refiner_sub').textContent=`In use • ${days} days`;setDashCard('dash_refiner','dash-ok');}else{$('dash_refiner_sub').textContent='Latest recorded set';setDashCard('dash_refiner','dash-neutral');}}
+  const complete=!!g&&!!sf,box=$('shift_complete');box.className='status '+(complete?'good':'warn');
+  box.innerHTML=complete?`<strong>Shift ${shift} Check Complete ✓</strong> • ${cloudOk?'Supabase':'Local fallback'}`:`<strong>Shift ${shift} Check: Pending</strong> • ${!g?'Glue Flow ':''}${!sf?'Sifter':''}${cloudOk?'':' • Database unavailable'}`;
 }
 
 document.querySelectorAll('.tab').forEach(b=>{
@@ -1644,7 +1664,7 @@ if('serviceWorker' in navigator){
 
 // ---------- Daily Report ----------
 const DAILY_KEY='production_cal_daily_reports_v1';
-const dailyFields=['d_date','d_log','d_incoming','d_waiting','d_chipper','d_silo','d_rubber','d_mtd','d_sanding','d_cts','d_wip','d_grading','d_melamine','d_days','d_ton','d_avgton','d_avgsec','d_secset','d_wear','d_digestor','d_refinerbar','d_cooking','d_remark'];
+const dailyFields=['d_date','d_shift','d_log','d_incoming','d_waiting','d_chipper','d_silo','d_rubber','d_mtd','d_sanding','d_cts','d_wip','d_grading','d_melamine','d_days','d_ton','d_avgton','d_avgsec','d_secset','d_wear','d_digestor','d_refinerbar','d_cooking','d_remark'];
 function nval(id){const x=parseFloat($(id)?.value);return Number.isFinite(x)?x:0}
 function addDTRow(name='',count='',minutes=''){
   const row=document.createElement('div'); row.className='grid'; row.style.marginBottom='8px';
@@ -1682,33 +1702,36 @@ function collectDaily(){
   data.running=[...document.querySelectorAll('#run_rows tr')].map(r=>({t:r.querySelector('.rr_t').value,grade:r.querySelector('.rr_grade').value,w:r.querySelector('.rr_w').value,l:r.querySelector('.rr_l').value,q:r.querySelector('.rr_q').value}));
   return data;
 }
-function saveDailyReport(){
+async function saveDailyReport(){
   const d=collectDaily(); if(!d.d_date){$('d_status').textContent='กรุณาเลือก Report Date';return}
-  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'); all[d.d_date]=d; localStorage.setItem(DAILY_KEY,JSON.stringify(all));
-  $('d_status').textContent='Saved Daily Report: '+d.d_date;
+  const key=d.d_date+'|'+(d.d_shift||getHomeShift());
+  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'); all[key]=d; localStorage.setItem(DAILY_KEY,JSON.stringify(all));
+  const cloud=await saveDailyCloudReport('save_record');
+  $('d_status').textContent=cloud?'Saved Daily Report to device + Database ✓':'Saved Daily Report on this device • Cloud unavailable';
 }
 function loadDailyDate(date){
-  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'),d=all[date]; if(!d)return false;
+  const shift=$('d_shift')?.value||getHomeShift();
+  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'),d=all[date+'|'+shift]||all[date]; if(!d)return false;
   dailyFields.forEach(id=>{if($(id))$(id).value=d[id]??''});
   $('dt_rows').innerHTML=''; (d.dt||[]).forEach(x=>addDTRow(x.name,x.count,x.min));
   $('run_rows').innerHTML=''; (d.running||[]).forEach(x=>addRunRow(x)); calcDT();calcRunning();return true;
 }
 function newDailyReport(){
-  dailyFields.forEach(id=>{if($(id))$(id).value=''}); $('d_date').value=new Date().toISOString().slice(0,10);
+  dailyFields.forEach(id=>{if($(id))$(id).value=''}); $('d_date').value=todayISO(); if($('d_shift'))$('d_shift').value=getHomeShift();
   $('dt_rows').innerHTML=''; ['Metal alarm','Double mat','High density alarm','Change production'].forEach(x=>addDTRow(x,'',''));
   $('run_rows').innerHTML=''; addRunRow(); calcDT();calcRunning(); $('d_status').textContent='New Daily Report';
 }
 function initDailyReport(){
   if($('d_date').dataset.ready)return;
-  $('d_date').dataset.ready='1'; $('d_date').addEventListener('change',()=>{const selectedDate=$('d_date').value;if(!loadDailyDate(selectedDate)){newDailyReport();$('d_date').value=selectedDate;}});
-  const date=new Date().toISOString().slice(0,10); $('d_date').value=date;
+  $('d_date').dataset.ready='1'; const reload=()=>{const selectedDate=$('d_date').value;if(!loadDailyDate(selectedDate)){const sh=$('d_shift').value;newDailyReport();$('d_date').value=selectedDate;$('d_shift').value=sh;}}; $('d_date').addEventListener('change',reload);$('d_shift').addEventListener('change',reload);
+  const date=todayISO(); $('d_date').value=date; $('d_shift').value=getHomeShift();
   if(!loadDailyDate(date))newDailyReport();
 }
 function reportLine(label,id,unit=''){const v=$(id).value.trim();return `${label} : ${v===''?'-':v}${unit}`}
 function buildDailyText(){
   const date=$('d_date').value||''; const dt=[...document.querySelectorAll('#dt_rows .grid')];
   const runs=[...document.querySelectorAll('#run_rows tr')];
-  let s=`Daily report  ${date}\n\n`;
+  let s=`Daily report  ${date} • Shift ${$('d_shift')?.value||getHomeShift()}\n\n`;
   s+=reportLine('log stock','d_log',' ton')+'\n'+reportLine('Incoming Truck','d_incoming')+'\n'+reportLine('Waiting Truck','d_waiting')+'\n'+reportLine('Chipper','d_chipper',' ton')+'\n'+reportLine('Chip Silo','d_silo',' %')+'\n'+reportLine('Rubber on floor','d_rubber',' ton')+'\n'+reportLine('PD1','d_pd1',' m³')+'\n'+reportLine('PD1 MTD DT','d_mtd',' %')+'\n'+reportLine('Sanding','d_sanding',' m³')+'\n'+reportLine('CTS','d_cts',' m³')+'\n'+reportLine('WIP [ All]','d_wip',' m³')+'\n'+reportLine('Wait for Grading','d_grading',' m³')+'\n'+reportLine('Melamine line','d_melamine',' pcs')+'\n\nSegment\n';
   s+=reportLine('Running days','d_days',' day')+'\n'+reportLine('Running Ton','d_ton',' ton')+'\n'+reportLine('Average','d_avgton',' ton/h')+'\n'+reportLine('Average','d_avgsec',' kWh/t')+'\n'+reportLine('SEC set now','d_secset',' kWh/t')+'\n'+reportLine('Wear','d_wear',' mm')+'\n'+reportLine('Digestor','d_digestor',' Bar')+'\n'+reportLine('Refiner','d_refinerbar',' Bar')+'\n'+reportLine('Cooking time','d_cooking',' min')+'\n\nRemark\n'+($('d_remark').value||'')+'\n\nPD1 yesterday major DT\n';
   dt.forEach(r=>{const n=r.querySelector('.dt_name').value||'-',c=r.querySelector('.dt_count').value||'0',m=r.querySelector('.dt_min').value||'0';s+=`${n} ${c} x : ${m} min\n`});
@@ -1722,6 +1745,49 @@ async function copyDailyReport(){
 }
 
 
+
+// ---------- Daily Cloud Report + Central History (V5.5) ----------
+function dailyCloudRow(action='save_record'){
+  const d=collectDaily(),date=d.d_date||todayISO(),shift=d.d_shift||getHomeShift();
+  return {report_key:`daily-${date}-${shift}`,report_date:date,shift,report_data:d,pd1_m3:Number($('run_total')?.textContent||0),total_major_dt_hr:Number($('dt_total_hr')?.textContent||0),last_action:action,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+}
+async function saveDailyCloudReport(action='save_record'){
+  if(!cloudReady()){if($('d_cloud_status'))$('d_cloud_status').textContent='Cloud unavailable';return false;}
+  try{await dbUpsert('daily_reports',dailyCloudRow(action));if($('d_cloud_status')){$('d_cloud_status').className='status good';$('d_cloud_status').textContent=`Saved to Database ✓ • ${action}`;}return true}
+  catch(e){if($('d_cloud_status')){$('d_cloud_status').className='status warn';$('d_cloud_status').textContent='Cloud save failed • '+String(e?.message||e);}return false}
+}
+let CENTRAL_HISTORY=[];
+async function loadCentralReportHistory(){
+  const body=$('hist_body');if(!body)return;if($('hist_status'))$('hist_status').textContent='กำลังโหลดจาก Supabase…';
+  try{
+    const [g,sf,d]=await Promise.all([
+      publicSelect('glue_flow_reports','select=*&order=created_at.desc&limit=100'),
+      publicSelect('sifter_reports','select=*&order=created_at.desc&limit=100'),
+      publicSelect('daily_reports','select=*&order=created_at.desc&limit=100')
+    ]);
+    CENTRAL_HISTORY=[
+      ...g.map(x=>({...x,_type:'GLUE',_main:`Glue ${Number(x.glue_result_pct).toFixed(2)}%`,_status:x.result_status||'-'})),
+      ...sf.map(x=>({...x,_type:'SIFTER',_main:`Sifter ${Number(x.sifter_pct).toFixed(2)}%`,_status:x.result_status||'-'})),
+      ...d.map(x=>({...x,_type:'DAILY',_main:`PD1 ${Number(x.pd1_m3||0).toFixed(2)} m³`,_status:`Major DT ${Number(x.total_major_dt_hr||0).toFixed(2)} hr`}))
+    ].sort((a,b)=>String(b.created_at||'').localeCompare(String(a.created_at||'')));
+    renderCentralHistory();
+  }catch(e){body.innerHTML='<tr><td colspan="7">โหลด Report History ไม่สำเร็จ</td></tr>';if($('hist_status')){$('hist_status').className='status warn';$('hist_status').textContent='Database error • '+String(e?.message||e)}}
+}
+function renderCentralHistory(){
+  const body=$('hist_body');if(!body)return;const date=$('hist_date')?.value||'',shift=$('hist_shift')?.value||'ALL',type=$('hist_type')?.value||'ALL';
+  const rows=CENTRAL_HISTORY.filter(x=>(!date||x.report_date===date)&&(shift==='ALL'||x.shift===shift)&&(type==='ALL'||x._type===type));
+  body.innerHTML=rows.length?rows.map((x,i)=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td><strong>${x._type==='GLUE'?'Glue Flow':x._type==='SIFTER'?'Sifter':'Daily Report'}</strong></td><td>${escapeHtml(x.shift||'-')}</td><td>${escapeHtml(x._main||'-')}</td><td>${escapeHtml(x._status||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td><td><button class="mini-btn" type="button" onclick="showCentralHistoryDetail('${escapeHtml(x._type)}','${escapeHtml(x.report_key)}')">View</button></td></tr>`).join(''):'<tr><td colspan="7">ไม่พบรายงานตาม Filter</td></tr>';
+  if($('hist_status')){$('hist_status').className='status good';$('hist_status').textContent=`Loaded ${CENTRAL_HISTORY.length} report(s) • Showing ${rows.length} • Login not required`;}
+}
+function clearHistoryFilters(){if($('hist_date'))$('hist_date').value='';if($('hist_shift'))$('hist_shift').value='ALL';if($('hist_type'))$('hist_type').value='ALL';renderCentralHistory();}
+function detailRows(obj,keys){return keys.map(([label,key,unit=''])=>{let v=obj?.[key];if(v===null||v===undefined||v==='')v='-';return `<div style="display:grid;grid-template-columns:1fr 1.2fr;gap:12px;padding:9px 0;border-bottom:1px solid #e5e7eb"><strong>${escapeHtml(label)}</strong><span>${escapeHtml(String(v))}${unit?' '+escapeHtml(unit):''}</span></div>`}).join('');}
+function showCentralHistoryDetail(type,key){
+  const x=CENTRAL_HISTORY.find(r=>r._type===type&&r.report_key===key);if(!x)return;let html='';
+  if(type==='GLUE')html=detailRows(x,[['Date','report_date'],['Shift','shift'],['Solid','solid_pct','%'],['Density','density_g_ml','g/ml'],['Fiber Screw','fiber_screw_kg_min','kg/min'],['Capture time','actual_capture_sec','sec'],['Glue Set','glue_set_pct','%'],['Glue Result','glue_result_pct','%'],['Diff','diff_pct_point','% point'],['Wet glue','wet_glue_kg_min','kg/min'],['Glue solid','dry_glue_kg_min','kg/min'],['Status','result_status']]);
+  else if(type==='SIFTER')html=detailRows(x,[['Date','report_date'],['Shift','shift'],['Refiner','refiner_tph','t/hr'],['Press performance','press_m3_hr','m³/hr'],['Sifter 1','sifter1_kg_min','kg/min'],['Sifter 2','sifter2_kg_min','kg/min'],['Total drop','total_drop_tph','t/hr'],['Sifter Result','sifter_pct','%'],['SEC Set','sec_set_kwh_t','kWh/t'],['Status','result_status']]);
+  else {const d=x.report_data||{};html=detailRows(x,[['Date','report_date'],['Shift','shift'],['PD1','pd1_m3','m³'],['Major DT','total_major_dt_hr','hr']])+`<div style="margin-top:14px"><strong>Remark</strong><div style="margin-top:6px;padding:10px;background:#f8fafc;border-radius:10px">${escapeHtml(d.d_remark||'-')}</div></div>`;}
+  $('hist_dialog_title').textContent=(type==='GLUE'?'Glue Flow':type==='SIFTER'?'Sifter':'Daily Report')+' • '+(x.report_date||'')+' • Shift '+(x.shift||'-');$('hist_dialog_body').innerHTML=html;$('hist_dialog').showModal();
+}
 
 // ---------- Glue Flow / Sifter PNG Report V5.2 ----------
 function opsReportDateLabel(dateValue){
@@ -1774,7 +1840,7 @@ function opsDetailBox(o,top,rows){
 function opsFooter(o){
   const {x,W,H,P}=o;
   x.fillStyle='#dfe7ef';x.fillRect(P,H-122,W-2*P,1);
-  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.4',P,H-76);
+  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.5',P,H-76);
   x.textAlign='right';x.fillText('Production Department',W-P,H-76);x.textAlign='left';
 }
 function canvasToPngBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create PNG')),'image/png',0.95));}
@@ -1832,7 +1898,7 @@ function makeDailyReportCanvas(){
  x.fillStyle='#f4f7fb';x.fillRect(0,0,W,H);x.fillStyle='#17324d';x.fillRect(0,0,W,150);
  x.fillStyle='white';x.font='700 42px Arial';x.fillText('DAILY PRODUCTION REPORT',P,65);
  let dv=$('d_date').value, ds=dv?new Date(dv+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}):'';
- x.font='24px Arial';x.fillText(ds,P,108);x.textAlign='right';x.font='700 24px Arial';x.fillText('PD1  '+$('run_total').textContent+' m³',W-P,108);x.textAlign='left';
+ x.font='24px Arial';x.fillText(ds+' • Shift '+($('d_shift')?.value||getHomeShift()),P,108);x.textAlign='right';x.font='700 24px Arial';x.fillText('PD1  '+$('run_total').textContent+' m³',W-P,108);x.textAlign='left';
  let y=178;
  function card(y0,h0){x.fillStyle='white';x.beginPath();x.roundRect(P,y0,W-2*P,h0,18);x.fill()}
  function section(title,a){let hh=cardH(a);card(y,hh);x.fillStyle='#17324d';x.font='700 25px Arial';x.fillText(title,P+24,y+38);let cw=(W-2*P-48)/3;a.forEach((v,i)=>{let xx=P+24+(i%3)*cw,yy=y+78+Math.floor(i/3)*68;x.fillStyle='#718096';x.font='18px Arial';x.fillText(v[0],xx,yy);x.fillStyle='#172b3a';x.font='700 25px Arial';x.fillText((v[1]||'-')+(v[2]?' '+v[2]:''),xx,yy+29)});y+=hh+G}
@@ -1846,8 +1912,8 @@ function makeDailyReportCanvas(){
 }
 function reportImageBlob(){return new Promise(r=>makeDailyReportCanvas().toBlob(r,'image/png',.95))}
 function saveBlob(b,n){let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
-async function saveDailyReportImage(){let b=await reportImageBlob();saveBlob(b,'Daily_Report_'+($('d_date').value||'report')+'.png');$('d_status').textContent='Saved Daily Report PNG ✓'}
-async function shareDailyReportImage(){let b=await reportImageBlob(),n='Daily_Report_'+($('d_date').value||'report')+'.png',f=new File([b],n,{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({title:'Daily Production Report',files:[f]});$('d_status').textContent='Shared Daily Report image ✓';return}}catch(e){if(e.name==='AbortError')return}saveBlob(b,n);$('d_status').textContent='Share file not supported — PNG saved instead'}
+async function saveDailyReportImage(){await saveDailyCloudReport('save_png');let b=await reportImageBlob();saveBlob(b,'Daily_Report_'+($('d_date').value||'report')+'_Shift_'+($('d_shift')?.value||getHomeShift())+'.png');$('d_status').textContent='Saved Daily Report PNG ✓'}
+async function shareDailyReportImage(){await saveDailyCloudReport('share_image');let b=await reportImageBlob(),n='Daily_Report_'+($('d_date').value||'report')+'_Shift_'+($('d_shift')?.value||getHomeShift())+'.png',f=new File([b],n,{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({title:'Daily Production Report',files:[f]});$('d_status').textContent='Shared Daily Report image ✓';return}}catch(e){if(e.name==='AbortError')return}saveBlob(b,n);$('d_status').textContent='Share file not supported — PNG saved instead'}
 
 
 // ---------- Glue Tank Calculator ----------
