@@ -178,7 +178,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.3 PWA • Supabase Master Data Phase 1</div>
+    <div class="version">V5.4 PWA • Supabase Cloud Reports</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -441,6 +441,17 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <div id="g_status" class="status">พร้อมคำนวณ</div>
     <div class="formula">Glue % = [(Container L × Density × Reference sec ÷ Actual sec) × Solid%] ÷ Fiber Screw × 100</div>
 
+    <div class="settings-box" style="margin-top:18px">
+      <strong>Cloud Report Database</strong>
+      <div id="g_cloud_status" class="status" style="margin-top:8px">Checking database session…</div>
+      <div class="buttons"><button class="btn secondary" type="button" onclick="refreshCloudReportHistory('g')">Refresh Cloud History</button><button class="btn secondary" type="button" onclick="goPage('md')">Database Login</button></div>
+    </div>
+    <h3 style="margin-top:20px">Shared Report History (Database)</h3>
+    <div class="shift-table-wrap"><table class="shift-table">
+      <thead><tr><th>Date/Time</th><th>Shift</th><th>Glue %</th><th>Set %</th><th>Diff</th><th>Status</th><th>Operator</th><th>Action</th></tr></thead>
+      <tbody id="g_cloud_body"><tr><td colspan="8">Database Login เพื่อดู Shared History</td></tr></tbody>
+    </table></div>
+
     <h3 style="margin-top:20px">Shift Records (this device)</h3>
     <div class="shift-table-wrap"><table class="shift-table">
       <thead><tr><th>Date</th><th>Shift</th><th>Solid %</th><th>Density</th><th>Fiber kg/min</th><th>Actual sec</th><th>Glue Set %</th><th>Glue %</th><th>Diff</th><th>Action</th></tr></thead>
@@ -483,6 +494,17 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       Total t/hr = (Sifter 1 kg/hr + Sifter 2 kg/hr) ÷ 1000<br>
       Sifter % = Total t/hr ÷ Refiner t/hr × 100
     </div>
+
+    <div class="settings-box" style="margin-top:18px">
+      <strong>Cloud Report Database</strong>
+      <div id="s_cloud_status" class="status" style="margin-top:8px">Checking database session…</div>
+      <div class="buttons"><button class="btn secondary" type="button" onclick="refreshCloudReportHistory('s')">Refresh Cloud History</button><button class="btn secondary" type="button" onclick="goPage('md')">Database Login</button></div>
+    </div>
+    <h3 style="margin-top:20px">Shared Report History (Database)</h3>
+    <div class="shift-table-wrap"><table class="shift-table">
+      <thead><tr><th>Date/Time</th><th>Shift</th><th>Sifter %</th><th>Total t/hr</th><th>Status</th><th>Operator</th><th>Action</th></tr></thead>
+      <tbody id="s_cloud_body"><tr><td colspan="7">Database Login เพื่อดู Shared History</td></tr></tbody>
+    </table></div>
 
     <h3 style="margin-top:20px">Shift Records (this device)</h3>
     <div class="shift-table-wrap"><table class="shift-table">
@@ -692,7 +714,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 
     <div class="db-login">
       <h3 style="margin-top:0">Database Admin</h3>
-      <div class="record-note" style="margin-bottom:10px">Login นี้เป็น Supabase Authentication สำหรับแก้ Shared Master Data และแยกจาก Admin PIN เดิมของข้อมูล local ในแอป</div>
+      <div class="record-note" style="margin-bottom:10px">Login นี้เป็น Supabase Authentication สำหรับ Cloud Reports และ Shared Master Data • สิทธิ์ Admin / Engineer / Operator ถูกควบคุมด้วย Role แยกจาก Admin PIN เดิม</div>
       <div class="grid">
         <div><label>Email</label><input id="db_admin_email" type="email" autocomplete="username" placeholder="admin@company.com"></div>
         <div><label>Password</label><input id="db_admin_password" type="password" autocomplete="current-password" placeholder="Supabase password"></div>
@@ -714,7 +736,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V5.3 • Supabase Master Data Phase 1 • Production Shift 1 Tools</div>
+  <div class="footer">V5.4 • Supabase Cloud Reports • Production Shift 1 Tools</div>
 </div>
 
 <script src="./config.js"></script>
@@ -723,7 +745,7 @@ const $=x=>document.getElementById(x);
 
 // ---------- Supabase Shared Master Data (V5.3 Phase 1) ----------
 const DEFAULT_PRESS_LENGTH=28.41;
-const PROD_DB={pressLength:DEFAULT_PRESS_LENGTH,settings:[],products:[],connected:false,lastError:'',user:null};
+const PROD_DB={pressLength:DEFAULT_PRESS_LENGTH,settings:[],products:[],connected:false,lastError:'',user:null,role:'guest'};
 const DB_SESSION_KEY='production_cal_supabase_session_v1';
 
 function dbConfig(){
@@ -799,6 +821,18 @@ async function loadMasterData(showMessage=false){
     return false;
   }
 }
+async function loadDbRole(){
+  const s=getDbSession();PROD_DB.role='guest';
+  if(!s?.access_token||!dbConfigured()){updateDbAdminUI();return 'guest';}
+  const c=dbConfig();
+  try{
+    const r=await fetch(`${c.url}/rest/v1/production_user_roles?select=role,display_name&user_id=eq.${encodeURIComponent(s.user?.id||'')}&limit=1`,{headers:dbHeaders(s.access_token),cache:'no-store'});
+    if(r.ok){const rows=await r.json();PROD_DB.role=rows?.[0]?.role||'operator';}
+    else PROD_DB.role='operator';
+  }catch{PROD_DB.role='operator';}
+  updateDbAdminUI();return PROD_DB.role;
+}
+
 async function dbAdminLogin(){
   if(!dbConfigured()){alert('กรุณาตั้งค่า config.js ก่อน');return;}
   const email=String($('db_admin_email')?.value||'').trim(),password=String($('db_admin_password')?.value||'');
@@ -809,22 +843,22 @@ async function dbAdminLogin(){
     const x=await r.json();if(!r.ok||!x.access_token)throw new Error(x.error_description||x.msg||x.error||`HTTP ${r.status}`);
     setDbSession({access_token:x.access_token,refresh_token:x.refresh_token||'',expires_at:Date.now()+Number(x.expires_in||3600)*1000,user:x.user||null});
     PROD_DB.user=x.user||null;if($('db_admin_password'))$('db_admin_password').value='';
-    await loadMasterData();
+    await loadDbRole();await loadMasterData();await loadGlueCloudHistory();await loadSifterCloudHistory();
   }catch(e){alert('Database Login ไม่สำเร็จ: '+String(e?.message||e));}
 }
-async function dbAdminLogout(){setDbSession(null);PROD_DB.user=null;PROD_DB.products=[];renderProductMaster();await loadMasterData();}
+async function dbAdminLogout(){setDbSession(null);PROD_DB.user=null;PROD_DB.role='guest';PROD_DB.products=[];renderProductMaster();updateDbAdminUI();await loadMasterData();await loadGlueCloudHistory();await loadSifterCloudHistory();}
 function updateDbAdminUI(){
-  const s=getDbSession(),on=!!s;
+  const s=getDbSession(),on=!!s,isAdmin=on&&PROD_DB.role==='admin';
   if($('db_login_btn'))$('db_login_btn').classList.toggle('admin-hidden',on);
   if($('db_logout_btn'))$('db_logout_btn').classList.toggle('admin-hidden',!on);
-  if($('db_admin_editor'))$('db_admin_editor').classList.toggle('admin-hidden',!on);
+  if($('db_admin_editor'))$('db_admin_editor').classList.toggle('admin-hidden',!isAdmin);
   if($('db_admin_status')){
     $('db_admin_status').className='status '+(on?'good':'');
-    $('db_admin_status').textContent=on?'Supabase authenticated • Shared Master edit enabled':'Not signed in';
+    $('db_admin_status').textContent=on?`Supabase authenticated • Role: ${PROD_DB.role}${isAdmin?' • Shared Master edit enabled':' • Cloud report access enabled'}`:'Not signed in';
   }
 }
 async function savePressLengthToDatabase(){
-  const s=getDbSession();if(!s){alert('กรุณา Database Login ก่อน');return;}
+  const s=getDbSession();if(!s){alert('กรุณา Database Login ก่อน');return;}if(PROD_DB.role!=='admin'){alert('บัญชีนี้ไม่มีสิทธิ์แก้ Shared Master Data');return;}
   const n=Number($('db_press_length')?.value);if(!Number.isFinite(n)||n<=0){alert('Press Length ต้องมากกว่า 0');return;}
   const c=dbConfig();
   try{
@@ -1165,6 +1199,73 @@ function exportRefinerCSV(){
 }
 
 
+// ---------- Cloud Report Database (V5.4) ----------
+const APP_VERSION='5.4';
+function cloudUserLabel(){const s=getDbSession();return s?.user?.email||s?.user?.id||'-';}
+function cloudSessionReady(){const s=getDbSession();return !!(dbConfigured()&&s?.access_token);}
+function setCloudStatus(kind,msg,cls=''){
+  const el=$(kind+'_cloud_status');if(!el)return;
+  el.className='status'+(cls?' '+cls:'');el.textContent=msg;
+}
+function reportKey(prefix,date,shift,values){
+  const raw=[prefix,date,shift,...values.map(v=>v===null||v===undefined?'':String(v))].join('|');
+  let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
+  return `${prefix}-${date}-${shift}-${(h>>>0).toString(16)}`;
+}
+async function dbUpsert(table,row){
+  const s=getDbSession();if(!s?.access_token)throw new Error('Database Login required');
+  const c=dbConfig();
+  const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=report_key`,{
+    method:'POST',headers:dbHeaders(s.access_token,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'}),
+    body:JSON.stringify(row),cache:'no-store'
+  });
+  const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);
+  try{return JSON.parse(text)}catch{return []}
+}
+function glueCloudRow(r,action='save'){
+  const date=$('g_date').value||new Date().toISOString().slice(0,10),shift=$('g_shift').value||'-',s=getDbSession();
+  const bad=r.diff!==null&&Math.abs(r.diff)>0.30;
+  return {report_key:reportKey('glue',date,shift,[s?.user?.id||'',r.solid,r.density,r.fiber,r.actual,r.set,r.refSec,r.volumeL]),report_date:date,shift,
+    solid_pct:r.solid,density_g_ml:r.density,fiber_screw_kg_min:r.fiber,actual_capture_sec:r.actual,glue_set_pct:r.set,
+    wet_glue_kg_min:r.wet,dry_glue_kg_min:r.dry,glue_result_pct:r.pct,diff_pct_point:r.diff,reference_sec:r.refSec,container_l:r.volumeL,
+    result_status:bad?'OUT_OF_RANGE':'NORMAL',last_action:action,operator_email:s?.user?.email||null,created_by:s?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+}
+function sifterCloudRow(r,action='save'){
+  const date=$('s_date').value||new Date().toISOString().slice(0,10),shift=$('s_shift').value||'-',s=getDbSession();
+  const st=r.pct>1?'HIGH':r.pct>0.5?'WARNING':'NORMAL';
+  return {report_key:reportKey('sifter',date,shift,[s?.user?.id||'',r.refiner,r.press,r.s1,r.s2,r.sec]),report_date:date,shift,
+    refiner_tph:r.refiner,press_m3_hr:r.press,sifter1_kg_min:r.s1,sifter2_kg_min:r.s2,sifter1_kg_hr:r.h1,sifter2_kg_hr:r.h2,
+    total_drop_tph:r.total,sifter_pct:r.pct,sec_set_kwh_t:r.sec,result_status:st,last_action:action,operator_email:s?.user?.email||null,created_by:s?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+}
+async function saveGlueCloudReport(r,action='save',quiet=false){
+  if(!cloudSessionReady()){setCloudStatus('g','Cloud not saved • Database Login required','warn');return false;}
+  try{await dbUpsert('glue_flow_reports',glueCloudRow(r,action));setCloudStatus('g',`Saved to Database ✓ • ${action} • ${cloudUserLabel()}`,'good');await loadGlueCloudHistory();return true}
+  catch(e){setCloudStatus('g','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
+}
+async function saveSifterCloudReport(r,action='save',quiet=false){
+  if(!cloudSessionReady()){setCloudStatus('s','Cloud not saved • Database Login required','warn');return false;}
+  try{await dbUpsert('sifter_reports',sifterCloudRow(r,action));setCloudStatus('s',`Saved to Database ✓ • ${action} • ${cloudUserLabel()}`,'good');await loadSifterCloudHistory();return true}
+  catch(e){setCloudStatus('s','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
+}
+function fmtCloudTime(x){try{return new Date(x).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}catch{return x||'-'}}
+async function loadGlueCloudHistory(){
+  const body=$('g_cloud_body');if(!body)return;
+  if(!cloudSessionReady()){body.innerHTML='<tr><td colspan="8">Database Login เพื่อดู Shared History</td></tr>';setCloudStatus('g','Database Login required for Cloud Reports','warn');return;}
+  try{const c=dbConfig(),s=getDbSession();const r=await fetch(`${c.url}/rest/v1/glue_flow_reports?select=*&order=created_at.desc&limit=30`,{headers:dbHeaders(s.access_token),cache:'no-store'});const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);const rows=JSON.parse(text);
+    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.glue_result_pct,2)}</strong></td><td>${x.glue_set_pct===null?'-':rNum(x.glue_set_pct,2)}</td><td>${x.diff_pct_point===null?'-':((Number(x.diff_pct_point)>=0?'+':'')+Number(x.diff_pct_point).toFixed(2))}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.operator_email||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="8">ยังไม่มี Cloud Report</td></tr>';
+    setCloudStatus('g',`Cloud connected • ${rows.length} recent report(s) • ${cloudUserLabel()}`,'good');
+  }catch(e){body.innerHTML='<tr><td colspan="8">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('g','Cloud history failed • '+String(e?.message||e),'warn')}
+}
+async function loadSifterCloudHistory(){
+  const body=$('s_cloud_body');if(!body)return;
+  if(!cloudSessionReady()){body.innerHTML='<tr><td colspan="7">Database Login เพื่อดู Shared History</td></tr>';setCloudStatus('s','Database Login required for Cloud Reports','warn');return;}
+  try{const c=dbConfig(),s=getDbSession();const r=await fetch(`${c.url}/rest/v1/sifter_reports?select=*&order=created_at.desc&limit=30`,{headers:dbHeaders(s.access_token),cache:'no-store'});const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);const rows=JSON.parse(text);
+    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.sifter_pct,2)}</strong></td><td>${rNum(x.total_drop_tph,5)}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.operator_email||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="7">ยังไม่มี Cloud Report</td></tr>';
+    setCloudStatus('s',`Cloud connected • ${rows.length} recent report(s) • ${cloudUserLabel()}`,'good');
+  }catch(e){body.innerHTML='<tr><td colspan="7">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('s','Cloud history failed • '+String(e?.message||e),'warn')}
+}
+async function refreshCloudReportHistory(kind){if(kind==='g')await loadGlueCloudHistory();else await loadSifterCloudHistory();}
+
 // ---------- Glue Flow ----------
 const GLUE_SETTINGS_KEY='production_cal_glue_settings_v1';
 const GLUE_RECORD_KEY='production_cal_glue_records_v1';
@@ -1240,13 +1341,15 @@ function exampleGlue(){
   calculateGlue();
 }
 function loadGlueRecords(){try{const x=JSON.parse(localStorage.getItem(GLUE_RECORD_KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
-function saveGlueRecord(){
+async function saveGlueRecord(){
   const r=calculateGlue(); if(!r)return;
   const date=$('g_date').value||new Date().toISOString().slice(0,10), shift=$('g_shift').value||'-';
   const data=loadGlueRecords();
   data.unshift({id:'g-'+Date.now(),date,shift,solid:r.solid,density:r.density,fiber:r.fiber,actual:r.actual,set:r.set,pct:r.pct,diff:r.diff,refSec:r.refSec,volumeL:r.volumeL});
   localStorage.setItem(GLUE_RECORD_KEY,JSON.stringify(data.slice(0,200)));
-  renderGlueRecords(); refreshHomeDashboard(); status('g','บันทึก Glue Flow ของกะนี้แล้ว','good');
+  renderGlueRecords(); refreshHomeDashboard();
+  const cloud=await saveGlueCloudReport(r,'save_record',true);
+  status('g',cloud?'บันทึก Glue Flow ในเครื่อง + Database แล้ว ✓':'บันทึกในเครื่องแล้ว • Cloud ต้อง Database Login',cloud?'good':'warn');
 }
 function deleteGlueRecord(id){
   if(!requireAdmin())return;
@@ -1314,13 +1417,15 @@ function exampleSifter(){
   calculateSifter();
 }
 function loadSifterRecords(){try{const x=JSON.parse(localStorage.getItem(SIFTER_RECORD_KEY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
-function saveSifterRecord(){
+async function saveSifterRecord(){
   const r=calculateSifter(); if(!r)return;
   const date=$('s_date').value||new Date().toISOString().slice(0,10), shift=$('s_shift').value||'-';
   const data=loadSifterRecords();
   data.unshift({id:'s-'+Date.now(),date,shift,refiner:r.refiner,press:r.press,s1:r.s1,s2:r.s2,total:r.total,pct:r.pct,sec:r.sec});
   localStorage.setItem(SIFTER_RECORD_KEY,JSON.stringify(data.slice(0,200)));
-  renderSifterRecords(); refreshHomeDashboard(); status('s','บันทึก Sifter ของกะนี้แล้ว','good');
+  renderSifterRecords(); refreshHomeDashboard();
+  const cloud=await saveSifterCloudReport(r,'save_record',true);
+  status('s',cloud?'บันทึก Sifter ในเครื่อง + Database แล้ว ✓':'บันทึกในเครื่องแล้ว • Cloud ต้อง Database Login',cloud?'good':'warn');
 }
 function deleteSifterRecord(id){
   if(!requireAdmin())return;
@@ -1443,8 +1548,8 @@ function goPage(id){
   $(id).classList.add('active');
   document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x.dataset.tab===id));
   $('main_tabs').style.display=id==='h'?'none':'grid';
-  if(id==='g'){syncGlueSettings();renderGlueRecords();$('g_shift').value=getHomeShift();}
-  if(id==='s'){renderSifterRecords();$('s_shift').value=getHomeShift();}
+  if(id==='g'){syncGlueSettings();renderGlueRecords();$('g_shift').value=getHomeShift();loadGlueCloudHistory();}
+  if(id==='s'){renderSifterRecords();$('s_shift').value=getHomeShift();loadSifterCloudHistory();}
   if(id==='r')renderRefiner();
   if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
   if(id==='d')initDailyReport();
@@ -1529,7 +1634,7 @@ refreshHomeDashboard();
 initRecipeLibrary();
 updateDbAdminUI();
 applyPressLength(DEFAULT_PRESS_LENGTH,'Local fallback');
-loadMasterData();
+loadDbRole().then(()=>loadMasterData()).then(()=>{loadGlueCloudHistory();loadSifterCloudHistory();});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
@@ -1669,7 +1774,7 @@ function opsDetailBox(o,top,rows){
 function opsFooter(o){
   const {x,W,H,P}=o;
   x.fillStyle='#dfe7ef';x.fillRect(P,H-122,W-2*P,1);
-  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.1',P,H-76);
+  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.4',P,H-76);
   x.textAlign='right';x.fillText('Production Department',W-P,H-76);x.textAlign='left';
 }
 function canvasToPngBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create PNG')),'image/png',0.95));}
@@ -1699,8 +1804,8 @@ function makeGlueReportCanvas(){
   opsDetailBox(o,820,[['Solid',r.solid.toFixed(2),'%'],['Density',r.density.toFixed(2),'g/ml'],['Fiber Screw',r.fiber.toFixed(1),'kg/min'],['Actual capture time',r.actual.toFixed(2),'sec']]);
   opsFooter(o);return o.c;
 }
-async function saveGlueReportImage(){const c=makeGlueReportCanvas();if(!c)return;const d=$('g_date').value||'report',s=$('g_shift').value||'-';await shareOrSaveOpsImage(c,`Glue_Flow_${d}_Shift_${s}.png`,'Glue Flow Report','g_status',true);}
-async function shareGlueReportImage(){const c=makeGlueReportCanvas();if(!c)return;const d=$('g_date').value||'report',s=$('g_shift').value||'-';await shareOrSaveOpsImage(c,`Glue_Flow_${d}_Shift_${s}.png`,'Glue Flow Report','g_status',false);}
+async function saveGlueReportImage(){const r=calculateGlue();if(!r)return;await saveGlueCloudReport(r,'save_png',true);const c=makeGlueReportCanvas();if(!c)return;const d=$('g_date').value||'report',s=$('g_shift').value||'-';await shareOrSaveOpsImage(c,`Glue_Flow_${d}_Shift_${s}.png`,'Glue Flow Report','g_status',true);}
+async function shareGlueReportImage(){const r=calculateGlue();if(!r)return;await saveGlueCloudReport(r,'share_image',true);const c=makeGlueReportCanvas();if(!c)return;const d=$('g_date').value||'report',s=$('g_shift').value||'-';await shareOrSaveOpsImage(c,`Glue_Flow_${d}_Shift_${s}.png`,'Glue Flow Report','g_status',false);}
 function makeSifterReportCanvas(){
   const r=calculateSifter();if(!r)return null;
   const date=$('s_date').value||new Date().toISOString().slice(0,10),shift=$('s_shift').value||'-';
@@ -1712,8 +1817,8 @@ function makeSifterReportCanvas(){
   opsDetailBox(o,680,[['Refiner production',r.refiner.toFixed(2),'t/hr'],['Press performance',r.press===null?'-':r.press.toFixed(2),'m³/hr'],['Sifter 1 calculated',r.h1.toFixed(3),'kg/hr'],['Sifter 2 calculated',r.h2.toFixed(3),'kg/hr'],['Total drop',r.total.toFixed(5),'t/hr'],['SEC Set',r.sec===null?'-':r.sec.toFixed(1),'kWh/t']]);
   opsFooter(o);return o.c;
 }
-async function saveSifterReportImage(){const c=makeSifterReportCanvas();if(!c)return;const d=$('s_date').value||'report',s=$('s_shift').value||'-';await shareOrSaveOpsImage(c,`Sifter_${d}_Shift_${s}.png`,'Sifter Operator Report','s_status',true);}
-async function shareSifterReportImage(){const c=makeSifterReportCanvas();if(!c)return;const d=$('s_date').value||'report',s=$('s_shift').value||'-';await shareOrSaveOpsImage(c,`Sifter_${d}_Shift_${s}.png`,'Sifter Operator Report','s_status',false);}
+async function saveSifterReportImage(){const r=calculateSifter();if(!r)return;await saveSifterCloudReport(r,'save_png',true);const c=makeSifterReportCanvas();if(!c)return;const d=$('s_date').value||'report',s=$('s_shift').value||'-';await shareOrSaveOpsImage(c,`Sifter_${d}_Shift_${s}.png`,'Sifter Operator Report','s_status',true);}
+async function shareSifterReportImage(){const r=calculateSifter();if(!r)return;await saveSifterCloudReport(r,'share_image',true);const c=makeSifterReportCanvas();if(!c)return;const d=$('s_date').value||'report',s=$('s_shift').value||'-';await shareOrSaveOpsImage(c,`Sifter_${d}_Shift_${s}.png`,'Sifter Operator Report','s_status',false);}
 
 // Daily Report PNG / Share
 function makeDailyReportCanvas(){

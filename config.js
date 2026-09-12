@@ -1,4 +1,4 @@
-// Production Capacity Calculator V5.3 — Supabase public client config
+// Production Capacity Calculator V5.4 — Supabase public client config
 // Safe for browser: use ONLY Project URL + Publishable key (sb_publishable_...).
 // NEVER put Database password, Secret key, or Service Role key in this file.
 window.PRODUCTION_CAL_CONFIG = {
