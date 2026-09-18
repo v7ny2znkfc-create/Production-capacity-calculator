@@ -178,7 +178,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.5.2 PWA • Daily Report Coarse Fiber & Dust • Created by Tom Wissanu</div>
+    <div class="version">V5.5.3 PWA • Daily Report Format Update • Created by Tom Wissanu</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -634,7 +634,6 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     <h3>Production Summary</h3>
     <div class="grid">
       <div><label>Report Date</label><input id="d_date" type="date"></div>
-      <div><label>Shift</label><select id="d_shift" style="width:100%;padding:13px 12px;border:1px solid #cbd5e1;border-radius:10px;font-size:16px;background:#fff"><option value="A">Shift A</option><option value="B">Shift B</option><option value="C">Shift C</option></select></div>
       <div><label>Log stock (ton)</label><input id="d_log" type="number" step="any"></div>
       <div><label>Incoming Truck</label><input id="d_incoming" type="number" step="1"></div>
       <div><label>Waiting Truck</label><input id="d_waiting" type="number" step="1"></div>
@@ -766,7 +765,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V5.5.2 • Daily Report Coarse Fiber & Dust • Production Shift 1 Tools • Created by Tom Wissanu</div>
+  <div class="footer">V5.5.3 • Daily Report Format Update • Production Shift 1 Tools • Created by Tom Wissanu</div>
 </div>
 
 <script src="./config.js"></script>
@@ -1230,7 +1229,7 @@ function exportRefinerCSV(){
 
 
 // ---------- Cloud Report Database (V5.5 Public Operator Workflow) ----------
-const APP_VERSION='5.5.1';
+const APP_VERSION='5.5.3';
 function cloudUserLabel(){const s=getDbSession();return s?.user?.email||'Public user';}
 function cloudReady(){return dbConfigured();}
 function setCloudStatus(kind,msg,cls=''){
@@ -1666,7 +1665,7 @@ if('serviceWorker' in navigator){
 
 // ---------- Daily Report ----------
 const DAILY_KEY='production_cal_daily_reports_v1';
-const dailyFields=['d_date','d_shift','d_log','d_incoming','d_waiting','d_chipper','d_silo','d_rubber','d_mtd','d_sanding','d_cts','d_wip','d_grading','d_melamine','d_days','d_ton','d_avgton','d_avgsec','d_secset','d_wear','d_digestor','d_refinerbar','d_cooking','d_coarse_fiber','d_dust','d_remark'];
+const dailyFields=['d_date','d_log','d_incoming','d_waiting','d_chipper','d_silo','d_rubber','d_mtd','d_sanding','d_cts','d_wip','d_grading','d_melamine','d_days','d_ton','d_avgton','d_avgsec','d_secset','d_wear','d_digestor','d_refinerbar','d_cooking','d_coarse_fiber','d_dust','d_remark'];
 function nval(id){const x=parseFloat($(id)?.value);return Number.isFinite(x)?x:0}
 function addDTRow(name='',count='',minutes=''){
   const row=document.createElement('div'); row.className='grid'; row.style.marginBottom='8px';
@@ -1706,34 +1705,43 @@ function collectDaily(){
 }
 async function saveDailyReport(){
   const d=collectDaily(); if(!d.d_date){$('d_status').textContent='กรุณาเลือก Report Date';return}
-  const key=d.d_date+'|'+(d.d_shift||getHomeShift());
+  const key=d.d_date;
   const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'); all[key]=d; localStorage.setItem(DAILY_KEY,JSON.stringify(all));
   const cloud=await saveDailyCloudReport('save_record');
   $('d_status').textContent=cloud?'Saved Daily Report to device + Database ✓':'Saved Daily Report on this device • Cloud unavailable';
 }
 function loadDailyDate(date){
-  const shift=$('d_shift')?.value||getHomeShift();
-  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}'),d=all[date+'|'+shift]||all[date]; if(!d)return false;
+  const all=JSON.parse(localStorage.getItem(DAILY_KEY)||'{}');
+  let d=all[date];
+  if(!d){ d=all[date+'|A']||all[date+'|B']||all[date+'|C']; }
+  if(!d)return false;
   dailyFields.forEach(id=>{if($(id))$(id).value=d[id]??''});
   $('dt_rows').innerHTML=''; (d.dt||[]).forEach(x=>addDTRow(x.name,x.count,x.min));
   $('run_rows').innerHTML=''; (d.running||[]).forEach(x=>addRunRow(x)); calcDT();calcRunning();return true;
 }
 function newDailyReport(){
-  dailyFields.forEach(id=>{if($(id))$(id).value=''}); $('d_date').value=todayISO(); if($('d_shift'))$('d_shift').value=getHomeShift();
+  dailyFields.forEach(id=>{if($(id))$(id).value=''}); $('d_date').value=todayISO();
   $('dt_rows').innerHTML=''; ['Metal alarm','Double mat','High density alarm','Change production'].forEach(x=>addDTRow(x,'',''));
   $('run_rows').innerHTML=''; addRunRow(); calcDT();calcRunning(); $('d_status').textContent='New Daily Report';
 }
 function initDailyReport(){
   if($('d_date').dataset.ready)return;
-  $('d_date').dataset.ready='1'; const reload=()=>{const selectedDate=$('d_date').value;if(!loadDailyDate(selectedDate)){const sh=$('d_shift').value;newDailyReport();$('d_date').value=selectedDate;$('d_shift').value=sh;}}; $('d_date').addEventListener('change',reload);$('d_shift').addEventListener('change',reload);
-  const date=todayISO(); $('d_date').value=date; $('d_shift').value=getHomeShift();
+  $('d_date').dataset.ready='1'; const reload=()=>{const selectedDate=$('d_date').value;if(!loadDailyDate(selectedDate)){newDailyReport();$('d_date').value=selectedDate;}}; $('d_date').addEventListener('change',reload);
+  const date=todayISO(); $('d_date').value=date;
   if(!loadDailyDate(date))newDailyReport();
+}
+function formatDailyDate(date){
+  if(!date)return '';
+  const d=new Date(date+'T00:00:00');
+  if(Number.isNaN(d.getTime()))return date;
+  const mon=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()];
+  return `${String(d.getDate()).padStart(2,'0')}/${mon}/${d.getFullYear()}`;
 }
 function reportLine(label,id,unit=''){const v=$(id).value.trim();return `${label} : ${v===''?'-':v}${unit}`}
 function buildDailyText(){
   const date=$('d_date').value||''; const dt=[...document.querySelectorAll('#dt_rows .grid')];
   const runs=[...document.querySelectorAll('#run_rows tr')];
-  let s=`Daily report  ${date} • Shift ${$('d_shift')?.value||getHomeShift()}\n\n`;
+  let s=`Daily report  ${formatDailyDate(date)}\n\n`;
   s+=reportLine('log stock','d_log',' ton')+'\n'+reportLine('Incoming Truck','d_incoming')+'\n'+reportLine('Waiting Truck','d_waiting')+'\n'+reportLine('Chipper','d_chipper',' ton')+'\n'+reportLine('Chip Silo','d_silo',' %')+'\n'+reportLine('Rubber on floor','d_rubber',' ton')+'\n'+reportLine('PD1','d_pd1',' m³')+'\n'+reportLine('PD1 MTD DT','d_mtd',' %')+'\n'+reportLine('Sanding','d_sanding',' m³')+'\n'+reportLine('CTS','d_cts',' m³')+'\n'+reportLine('WIP [ All]','d_wip',' m³')+'\n'+reportLine('Wait for Grading','d_grading',' m³')+'\n'+reportLine('Melamine line','d_melamine',' pcs')+'\n\nSegment\n';
   s+=reportLine('Running days','d_days',' day')+'\n'+reportLine('Running Ton','d_ton',' ton')+'\n'+reportLine('Average','d_avgton',' ton/h')+'\n'+reportLine('Average','d_avgsec',' kWh/t')+'\n'+reportLine('SEC set now','d_secset',' kWh/t')+'\n'+reportLine('Wear','d_wear',' mm')+'\n'+reportLine('Digestor','d_digestor',' Bar')+'\n'+reportLine('Refiner','d_refinerbar',' Bar')+'\n'+reportLine('Cooking time','d_cooking',' min')+'\n'+reportLine('Coarse Fiber','d_coarse_fiber',' %')+'\n'+reportLine('Dust','d_dust',' %')+'\n\nRemark\n'+($('d_remark').value||'')+'\n\nPD1 yesterday major DT\n';
   dt.forEach(r=>{const n=r.querySelector('.dt_name').value||'-',c=r.querySelector('.dt_count').value||'0',m=r.querySelector('.dt_min').value||'0';s+=`${n} ${c} x : ${m} min\n`});
@@ -1750,8 +1758,8 @@ async function copyDailyReport(){
 
 // ---------- Daily Cloud Report + Central History (V5.5) ----------
 function dailyCloudRow(action='save_record'){
-  const d=collectDaily(),date=d.d_date||todayISO(),shift=d.d_shift||getHomeShift();
-  return {report_key:`daily-${date}-${shift}`,report_date:date,shift,report_data:d,pd1_m3:Number($('run_total')?.textContent||0),total_major_dt_hr:Number($('dt_total_hr')?.textContent||0),last_action:action,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+  const d=collectDaily(),date=d.d_date||todayISO();
+  return {report_key:`daily-${date}`,report_date:date,shift:null,report_data:d,pd1_m3:Number($('run_total')?.textContent||0),total_major_dt_hr:Number($('dt_total_hr')?.textContent||0),last_action:action,app_version:APP_VERSION,updated_at:new Date().toISOString()};
 }
 async function saveDailyCloudReport(action='save_record'){
   if(!cloudReady()){if($('d_cloud_status'))$('d_cloud_status').textContent='Cloud unavailable';return false;}
@@ -1787,8 +1795,8 @@ function showCentralHistoryDetail(type,key){
   const x=CENTRAL_HISTORY.find(r=>r._type===type&&r.report_key===key);if(!x)return;let html='';
   if(type==='GLUE')html=detailRows(x,[['Date','report_date'],['Shift','shift'],['Solid','solid_pct','%'],['Density','density_g_ml','g/ml'],['Fiber Screw','fiber_screw_kg_min','kg/min'],['Capture time','actual_capture_sec','sec'],['Glue Set','glue_set_pct','%'],['Glue Result','glue_result_pct','%'],['Diff','diff_pct_point','% point'],['Wet glue','wet_glue_kg_min','kg/min'],['Glue solid','dry_glue_kg_min','kg/min'],['Status','result_status']]);
   else if(type==='SIFTER')html=detailRows(x,[['Date','report_date'],['Shift','shift'],['Refiner','refiner_tph','t/hr'],['Press performance','press_m3_hr','m³/hr'],['Sifter 1','sifter1_kg_min','kg/min'],['Sifter 2','sifter2_kg_min','kg/min'],['Total drop','total_drop_tph','t/hr'],['Sifter Result','sifter_pct','%'],['SEC Set','sec_set_kwh_t','kWh/t'],['Status','result_status']]);
-  else {const d=x.report_data||{};html=detailRows(x,[['Date','report_date'],['Shift','shift'],['PD1','pd1_m3','m³'],['Major DT','total_major_dt_hr','hr']])+detailRows(d,[['Coarse Fiber','d_coarse_fiber','%'],['Dust','d_dust','%']])+`<div style="margin-top:14px"><strong>Remark</strong><div style="margin-top:6px;padding:10px;background:#f8fafc;border-radius:10px">${escapeHtml(d.d_remark||'-')}</div></div>`;}
-  $('hist_dialog_title').textContent=(type==='GLUE'?'Glue Flow':type==='SIFTER'?'Sifter':'Daily Report')+' • '+(x.report_date||'')+' • Shift '+(x.shift||'-');$('hist_dialog_body').innerHTML=html;$('hist_dialog').showModal();
+  else {const d=x.report_data||{};html=`<div class="detail-grid"><div><span>Date</span><strong>${escapeHtml(formatDailyDate(x.report_date))}</strong></div><div><span>PD1</span><strong>${escapeHtml(String(x.pd1_m3??'-'))} m³</strong></div><div><span>Major DT</span><strong>${escapeHtml(String(x.total_major_dt_hr??'-'))} hr</strong></div></div>`+detailRows(d,[['Coarse Fiber','d_coarse_fiber','%'],['Dust','d_dust','%']])+`<div style="margin-top:14px"><strong>Remark</strong><div style="margin-top:6px;padding:10px;background:#f8fafc;border-radius:10px">${escapeHtml(d.d_remark||'-')}</div></div>`;}
+  $('hist_dialog_title').textContent=(type==='GLUE'?'Glue Flow':type==='SIFTER'?'Sifter':'Daily Report')+' • '+(type==='DAILY'?formatDailyDate(x.report_date):(x.report_date||''))+(type==='DAILY'?'':' • Shift '+(x.shift||'-'));$('hist_dialog_body').innerHTML=html;$('hist_dialog').showModal();
 }
 
 // ---------- Glue Flow / Sifter PNG Report V5.2 ----------
@@ -1842,7 +1850,7 @@ function opsDetailBox(o,top,rows){
 function opsFooter(o){
   const {x,W,H,P}=o;
   x.fillStyle='#dfe7ef';x.fillRect(P,H-122,W-2*P,1);
-  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.5.2 • Created by Tom Wissanu',P,H-76);
+  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.5.3 • Created by Tom Wissanu',P,H-76);
   x.textAlign='right';x.fillText('Production Department',W-P,H-76);x.textAlign='left';
 }
 function canvasToPngBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create PNG')),'image/png',0.95));}
@@ -1899,8 +1907,8 @@ function makeDailyReportCanvas(){
  const c=document.createElement('canvas');c.width=W;c.height=H;const x=c.getContext('2d');
  x.fillStyle='#f4f7fb';x.fillRect(0,0,W,H);x.fillStyle='#17324d';x.fillRect(0,0,W,150);
  x.fillStyle='white';x.font='700 42px Arial';x.fillText('DAILY PRODUCTION REPORT',P,65);
- let dv=$('d_date').value, ds=dv?new Date(dv+'T00:00:00').toLocaleDateString('en-US',{month:'short',day:'2-digit',year:'numeric'}):'';
- x.font='24px Arial';x.fillText(ds+' • Shift '+($('d_shift')?.value||getHomeShift()),P,108);x.textAlign='right';x.font='700 24px Arial';x.fillText('PD1  '+$('run_total').textContent+' m³',W-P,108);x.textAlign='left';
+ let dv=$('d_date').value, ds=formatDailyDate(dv);
+ x.font='24px Arial';x.fillText(ds,P,108);x.textAlign='right';x.font='700 24px Arial';x.fillText('PD1  '+$('run_total').textContent+' m³',W-P,108);x.textAlign='left';
  let y=178;
  function card(y0,h0){x.fillStyle='white';x.beginPath();x.roundRect(P,y0,W-2*P,h0,18);x.fill()}
  function section(title,a){let hh=cardH(a);card(y,hh);x.fillStyle='#17324d';x.font='700 25px Arial';x.fillText(title,P+24,y+38);let cw=(W-2*P-48)/3;a.forEach((v,i)=>{let xx=P+24+(i%3)*cw,yy=y+78+Math.floor(i/3)*68;x.fillStyle='#718096';x.font='18px Arial';x.fillText(v[0],xx,yy);x.fillStyle='#172b3a';x.font='700 25px Arial';x.fillText((v[1]||'-')+(v[2]?' '+v[2]:''),xx,yy+29)});y+=hh+G}
@@ -1914,8 +1922,8 @@ function makeDailyReportCanvas(){
 }
 function reportImageBlob(){return new Promise(r=>makeDailyReportCanvas().toBlob(r,'image/png',.95))}
 function saveBlob(b,n){let a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=n;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},800)}
-async function saveDailyReportImage(){await saveDailyCloudReport('save_png');let b=await reportImageBlob();saveBlob(b,'Daily_Report_'+($('d_date').value||'report')+'_Shift_'+($('d_shift')?.value||getHomeShift())+'.png');$('d_status').textContent='Saved Daily Report PNG ✓'}
-async function shareDailyReportImage(){await saveDailyCloudReport('share_image');let b=await reportImageBlob(),n='Daily_Report_'+($('d_date').value||'report')+'_Shift_'+($('d_shift')?.value||getHomeShift())+'.png',f=new File([b],n,{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({title:'Daily Production Report',files:[f]});$('d_status').textContent='Shared Daily Report image ✓';return}}catch(e){if(e.name==='AbortError')return}saveBlob(b,n);$('d_status').textContent='Share file not supported — PNG saved instead'}
+async function saveDailyReportImage(){await saveDailyCloudReport('save_png');let b=await reportImageBlob();saveBlob(b,'Daily_Report_'+formatDailyDate($('d_date').value||'report').replaceAll('/','-')+'.png');$('d_status').textContent='Saved Daily Report PNG ✓'}
+async function shareDailyReportImage(){await saveDailyCloudReport('share_image');let b=await reportImageBlob(),n='Daily_Report_'+formatDailyDate($('d_date').value||'report').replaceAll('/','-')+'.png',f=new File([b],n,{type:'image/png'});try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({title:'Daily Production Report',files:[f]});$('d_status').textContent='Shared Daily Report image ✓';return}}catch(e){if(e.name==='AbortError')return}saveBlob(b,n);$('d_status').textContent='Share file not supported — PNG saved instead'}
 
 
 // ---------- Glue Tank Calculator ----------
