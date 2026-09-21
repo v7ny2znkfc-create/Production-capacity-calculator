@@ -340,12 +340,12 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
 
   <section id="r" class="panel"><div class="card">
     <h2>Refiner Plate Record</h2>
-    <div class="help">ทุกคนสามารถดู Refiner Plate Record ได้ แต่การเพิ่ม แก้ไข หรือลบข้อมูลต้องเข้า Admin mode ก่อน</div>
+    <div class="help">Refiner Plate ใช้ Supabase เป็นข้อมูลกลาง • ทุกคนดูได้ • การเพิ่ม แก้ไข หรือลบต้อง Database Login ด้วยสิทธิ์ Admin</div>
 
     <div class="admin-bar">
       <span id="admin_badge" class="admin-badge admin-locked">View only</span>
-      <button id="admin_login_btn" class="btn secondary" type="button" onclick="adminLogin()">Admin Login</button>
-      <button id="admin_logout_btn" class="btn secondary admin-hidden" type="button" onclick="adminLogout()">Lock</button>
+      <button id="admin_login_btn" class="btn secondary admin-hidden" type="button">Admin via Shared Master Data</button>
+      <button id="admin_logout_btn" class="btn secondary admin-hidden" type="button">Lock</button>
     </div>
 
     <div class="record-toolbar">
@@ -765,7 +765,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V5.5.4 • Refiner Dashboard Sync Fix • Production Shift 1 Tools • Created by Tom Wissanu</div>
+  <div class="footer">V5.5.5 • Refiner Plate Cloud Sync • Production Shift 1 Tools • Created by Tom Wissanu</div>
 </div>
 
 <script src="./config.js"></script>
@@ -872,10 +872,10 @@ async function dbAdminLogin(){
     const x=await r.json();if(!r.ok||!x.access_token)throw new Error(x.error_description||x.msg||x.error||`HTTP ${r.status}`);
     setDbSession({access_token:x.access_token,refresh_token:x.refresh_token||'',expires_at:Date.now()+Number(x.expires_in||3600)*1000,user:x.user||null});
     PROD_DB.user=x.user||null;if($('db_admin_password'))$('db_admin_password').value='';
-    await loadDbRole();await loadMasterData();await loadGlueCloudHistory();await loadSifterCloudHistory();
+    await loadDbRole();await loadMasterData();await loadGlueCloudHistory();await loadSifterCloudHistory();await loadRefinerCloud();
   }catch(e){alert('Database Login ไม่สำเร็จ: '+String(e?.message||e));}
 }
-async function dbAdminLogout(){setDbSession(null);PROD_DB.user=null;PROD_DB.role='guest';PROD_DB.products=[];renderProductMaster();updateDbAdminUI();await loadMasterData();await loadGlueCloudHistory();await loadSifterCloudHistory();}
+async function dbAdminLogout(){setDbSession(null);PROD_DB.user=null;PROD_DB.role='guest';PROD_DB.products=[];renderProductMaster();updateDbAdminUI();await loadMasterData();await loadGlueCloudHistory();await loadSifterCloudHistory();await loadRefinerCloud(false);}
 function updateDbAdminUI(){
   const s=getDbSession(),on=!!s,isAdmin=on&&PROD_DB.role==='admin';
   if($('db_login_btn'))$('db_login_btn').classList.toggle('admin-hidden',on);
@@ -885,6 +885,13 @@ function updateDbAdminUI(){
     $('db_admin_status').className='status '+(on?'good':'');
     $('db_admin_status').textContent=on?`Supabase authenticated • Role: ${PROD_DB.role}${isAdmin?' • Shared Master edit enabled':' • Cloud report access enabled'}`:'Not signed in';
   }
+  const refAdmin=isAdmin;
+  if($('admin_badge')){$('admin_badge').textContent=refAdmin?'Database Admin':'View only';$('admin_badge').className='admin-badge '+(refAdmin?'admin-unlocked':'admin-locked');}
+  if($('admin_login_btn'))$('admin_login_btn').classList.add('admin-hidden');
+  if($('admin_logout_btn'))$('admin_logout_btn').classList.add('admin-hidden');
+  if($('new_record_btn'))$('new_record_btn').classList.toggle('admin-hidden',!refAdmin);
+  if($('r_form'))$('r_form').classList.toggle('admin-hidden',!refAdmin);
+  if($('r_body'))renderRefiner();
 }
 async function savePressLengthToDatabase(){
   const s=getDbSession();if(!s){alert('กรุณา Database Login ก่อน');return;}if(PROD_DB.role!=='admin'){alert('บัญชีนี้ไม่มีสิทธิ์แก้ Shared Master Data');return;}
@@ -1048,16 +1055,6 @@ function adminLogout(){
 }
 function updateAdminUI(){
   const on=adminActive();
-  const badge=$('admin_badge'), login=$('admin_login_btn'), logout=$('admin_logout_btn');
-  const add=$('new_record_btn'), form=$('r_form');
-  if(badge){
-    badge.textContent=on?'Admin mode':'View only';
-    badge.className='admin-badge '+(on?'admin-unlocked':'admin-locked');
-    login.classList.toggle('admin-hidden',on);
-    logout.classList.toggle('admin-hidden',!on);
-    add.classList.toggle('admin-hidden',!on);
-    form.classList.toggle('admin-hidden',!on);
-  }
   const gb=$('g_admin_badge'), gl=$('g_admin_login_btn'), go=$('g_admin_logout_btn'), gs=$('g_admin_settings');
   if(gb){
     gb.textContent=on?'Admin mode':'View / Operator mode';
@@ -1085,11 +1082,13 @@ setInterval(()=>{
   }
 },30000);
 
-// ---------- Refiner Plate Record ----------
+// ---------- Refiner Plate Record / Supabase Cloud (V5.5.5) ----------
 const REFINER_KEY='production_cal_refiner_records_v1';
 const REFINER_SEED_VERSION_KEY='production_cal_refiner_seed_version';
 const REFINER_SEED_VERSION='2026-full-v1';
 let refinerEditId=null;
+let REFINER_CLOUD_DATA=[];
+let REFINER_CLOUD_LOADED=false;
 const refinerSeed=[
   {id:'seed-2026-1',setNo:1,change:'2026-01-29',remove:'2026-03-04',prod:18183.90,hours:734.8,ps:'58SAQM64',pr:'58SAQC66',cs:'-',cr:'-',bolt:'-',sec:92.8},
   {id:'seed-2026-2',setNo:2,change:'2026-03-04',remove:'2026-04-05',prod:16906.50,hours:666.9,ps:'58SAQM64',pr:'58SAQC66',cs:'-',cr:'-',bolt:'-',sec:103.2},
@@ -1101,205 +1100,79 @@ const refinerSeed=[
   {id:'seed-2026-8',setNo:8,change:'2026-08-20',remove:'2026-09-01',prod:5445.40,hours:252.3,ps:'54SDQF03',pr:'54SDQM04',cs:'-',cr:'-',bolt:'-',sec:105.5},
   {id:'seed-2026-9',setNo:9,change:'2026-09-01',remove:'',prod:null,hours:null,ps:'58SDQM33',pr:'58SDQM31',cs:'36SR1A04',cr:'36SQ1A04',bolt:'Only 72 bolt',sec:null}
 ];
-function loadRefiner(){
+function loadRefinerLocal(){
   try{
     const d=JSON.parse(localStorage.getItem(REFINER_KEY)||'null');
     if(Array.isArray(d)){
       if(localStorage.getItem(REFINER_SEED_VERSION_KEY)!==REFINER_SEED_VERSION){
         const userRecords=d.filter(x=>!String(x.id||'').startsWith('seed-'));
         const merged=[...JSON.parse(JSON.stringify(refinerSeed)),...userRecords];
-        localStorage.setItem(REFINER_KEY,JSON.stringify(merged));
-        localStorage.setItem(REFINER_SEED_VERSION_KEY,REFINER_SEED_VERSION);
-        return merged;
+        localStorage.setItem(REFINER_KEY,JSON.stringify(merged));localStorage.setItem(REFINER_SEED_VERSION_KEY,REFINER_SEED_VERSION);return merged;
       }
       return d;
     }
   }catch(e){}
-  localStorage.setItem(REFINER_KEY,JSON.stringify(refinerSeed));
-  localStorage.setItem(REFINER_SEED_VERSION_KEY,REFINER_SEED_VERSION);
-  return JSON.parse(JSON.stringify(refinerSeed));
+  localStorage.setItem(REFINER_KEY,JSON.stringify(refinerSeed));localStorage.setItem(REFINER_SEED_VERSION_KEY,REFINER_SEED_VERSION);return JSON.parse(JSON.stringify(refinerSeed));
 }
+function loadRefiner(){return REFINER_CLOUD_LOADED?REFINER_CLOUD_DATA:loadRefinerLocal()}
 function saveRefinerData(d){localStorage.setItem(REFINER_KEY,JSON.stringify(d))}
-function rNum(v,digits=2){
-  if(v===null||v===undefined||v==='')return '-';
-  const n=Number(v); if(!Number.isFinite(n))return '-';
-  return n.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits});
+function refinerFromDb(x){return {id:String(x.record_id),setNo:Number(x.set_no),change:x.change_date||'',remove:x.remove_date||'',prod:x.production_t===null?null:Number(x.production_t),hours:x.production_hours===null?null:Number(x.production_hours),ps:x.plate_stator||'-',pr:x.plate_rotor||'-',cs:x.center_stator||'-',cr:x.center_rotor||'-',bolt:x.bolt_note||'-',sec:x.sec_avg===null?null:Number(x.sec_avg)}}
+function refinerToDb(x){return {record_id:String(x.id),set_no:Number(x.setNo),record_year:Number(String(x.change).slice(0,4)),change_date:x.change,remove_date:x.remove||null,production_t:x.prod,production_hours:x.hours,plate_stator:x.ps||'-',plate_rotor:x.pr||'-',center_stator:x.cs||'-',center_rotor:x.cr||'-',bolt_note:x.bolt||'-',sec_avg:x.sec,updated_at:new Date().toISOString()}}
+function dbAdminReady(){return !!getDbSession()&&PROD_DB.role==='admin'}
+async function loadRefinerCloud(migrateLocal=true){
+  try{
+    const rows=await publicSelect('refiner_plate_records','select=*&order=record_year.asc,set_no.asc');
+    REFINER_CLOUD_DATA=rows.map(refinerFromDb);REFINER_CLOUD_LOADED=true;
+    // One-time safety migration: if this Admin device already contains a newer local Set (e.g. Set 10), publish it to Cloud.
+    if(migrateLocal&&dbAdminReady()){
+      const local=loadRefinerLocal();
+      const cloudKeys=new Set(REFINER_CLOUD_DATA.map(x=>`${rYearOf(x)}-${x.setNo}`));
+      const missing=local.filter(x=>x.change&&!cloudKeys.has(`${rYearOf(x)}-${x.setNo}`));
+      for(const x of missing)await upsertRefinerCloud(x);
+      if(missing.length)return loadRefinerCloud(false);
+    }
+    saveRefinerData(REFINER_CLOUD_DATA);refreshRefinerYears();renderRefiner();renderHomeRefiner();
+    if($('r_status'))status('r',`Cloud connected • ${REFINER_CLOUD_DATA.length} record(s)`,'good');
+    return true;
+  }catch(e){
+    REFINER_CLOUD_LOADED=false;refreshRefinerYears();renderRefiner();renderHomeRefiner();
+    if($('r_status'))status('r','Cloud unavailable • ใช้ข้อมูลสำรองในเครื่อง • '+String(e?.message||e),'warn');return false;
+  }
 }
-function rDate(s){if(!s)return '-';const [y,m,d]=s.split('-');return `${d}/${m}/${y}`}
-function rDays(a,b){
-  if(!a)return null;
-  const end=b?new Date(b+'T00:00:00'):new Date();
-  const start=new Date(a+'T00:00:00');
-  return Math.max(0,Math.floor((end-start)/86400000));
+async function upsertRefinerCloud(x){
+  const s=getDbSession();if(!s?.access_token||PROD_DB.role!=='admin')throw new Error('ต้อง Database Login ด้วยสิทธิ์ admin');
+  const c=dbConfig(),body=refinerToDb(x);if(s.user?.id)body.updated_by=s.user.id;
+  const r=await fetch(`${c.url}/rest/v1/refiner_plate_records?on_conflict=record_year,set_no`,{method:'POST',headers:dbHeaders(s.access_token,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'}),body:JSON.stringify(body),cache:'no-store'});
+  const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);return text?JSON.parse(text):[];
 }
-function rYearOf(x){return x.change?Number(x.change.slice(0,4)):0}
-function refreshRefinerYears(prefer){
-  const data=loadRefiner();
-  const years=[...new Set(data.map(rYearOf).filter(Boolean))].sort((a,b)=>b-a);
-  const cur=new Date().getFullYear(); if(!years.includes(cur))years.unshift(cur);
-  const sel=$('r_year'); if(!sel)return;
-  const wanted=String(prefer||sel.value||years[0]||cur);
-  sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');
-  if(years.map(String).includes(wanted))sel.value=wanted;
-}
-function renderRefiner(){
-  if(!$('r_body'))return;
-  refreshRefinerYears();
-  const year=Number($('r_year').value);
-  const rows=loadRefiner().filter(x=>rYearOf(x)===year).sort((a,b)=>(a.setNo||0)-(b.setNo||0));
-  $('r_body').innerHTML=rows.length?rows.map(x=>{
-    const days=rDays(x.change,x.remove);
-    const daysText=x.remove?String(days):`<span class="inuse">${days} (In use)</span>`;
-    return `<tr>
-      <td><span class="set-badge">Set ${x.setNo}/${year}</span></td>
-      <td>${rDate(x.change)}</td><td>${x.remove?rDate(x.remove):'<span class="inuse">In use</span>'}</td>
-      <td>${rNum(x.prod)}</td><td>${rNum(x.hours,1)}</td><td>${daysText}</td>
-      <td>${x.ps||'-'}</td><td>${x.pr||'-'}</td><td>${x.cs||'-'}</td><td>${x.cr||'-'}</td>
-      <td class="left">${x.bolt||'-'}</td><td>${rNum(x.sec,1)}</td>
-      <td>${adminActive()
-        ? `<div class="record-actions"><button class="mini-btn" onclick="editRefiner('${x.id}')">Edit</button><button class="mini-btn danger" onclick="deleteRefiner('${x.id}')">Delete</button></div>`
-        : '<span style="color:#64748b;font-size:12px;font-weight:700">View only</span>'}</td>
-    </tr>`
-  }).join(''):`<tr><td colspan="13">ยังไม่มีข้อมูลปี ${year}</td></tr>`;
-}
-function clearRefinerForm(){
-  refinerEditId=null;
-  ['r_change','r_remove','r_prod','r_hours','r_ps','r_pr','r_cs','r_cr','r_sec','r_bolt'].forEach(id=>$(id).value='');
-  $('r_form_title').textContent='Add Refiner Plate Record';
-  status('r','พร้อมบันทึกข้อมูล');
-}
-function newRefinerRecord(){
-  if(!requireAdmin())return;
-  clearRefinerForm();
-  $('r_change').value=`${$('r_year').value}-01-01`;
-  $('r_change').focus();
-}
-function nextSetNo(data,year){return Math.max(0,...data.filter(x=>rYearOf(x)===year).map(x=>Number(x.setNo)||0))+1}
-function saveRefinerRecord(){
-  if(!requireAdmin())return;
-  const change=$('r_change').value, remove=$('r_remove').value;
-  if(!change){status('r','กรุณาระบุ Date changed','warn');return}
-  if(remove && new Date(remove)<new Date(change)){status('r','Date removed ต้องไม่ก่อน Date changed','warn');return}
-  const data=loadRefiner(); const year=Number(change.slice(0,4));
-  const obj={
-    id:refinerEditId||('r-'+Date.now()), setNo:null, change, remove,
-    prod:$('r_prod').value===''?null:Number($('r_prod').value),
-    hours:$('r_hours').value===''?null:Number($('r_hours').value),
-    ps:$('r_ps').value.trim()||'-', pr:$('r_pr').value.trim()||'-', cs:$('r_cs').value.trim()||'-', cr:$('r_cr').value.trim()||'-',
-    bolt:$('r_bolt').value.trim()||'-', sec:$('r_sec').value===''?null:Number($('r_sec').value)
-  };
-  if(refinerEditId){
-    const i=data.findIndex(x=>x.id===refinerEditId);
-    if(i<0)return;
-    const oldYear=rYearOf(data[i]);
-    obj.setNo=(oldYear===year)?data[i].setNo:nextSetNo(data,year);
-    data[i]=obj;
-  }else obj.setNo=nextSetNo(data,year);
-  saveRefinerData(data); refreshRefinerYears(year); $('r_year').value=String(year); renderRefiner();
-  clearRefinerForm(); renderHomeDashboard(); status('r',`บันทึก Set ${obj.setNo}/${year} เรียบร้อย`,'good');
-}
-function editRefiner(id){
-  if(!requireAdmin())return;
-  const x=loadRefiner().find(a=>a.id===id); if(!x)return;
-  refinerEditId=id;
-  $('r_change').value=x.change||'';$('r_remove').value=x.remove||'';$('r_prod').value=x.prod??'';$('r_hours').value=x.hours??'';
-  $('r_ps').value=x.ps==='-'?'':x.ps||'';$('r_pr').value=x.pr==='-'?'':x.pr||'';$('r_cs').value=x.cs==='-'?'':x.cs||'';$('r_cr').value=x.cr==='-'?'':x.cr||'';
-  $('r_bolt').value=x.bolt==='-'?'':x.bolt||'';$('r_sec').value=x.sec??'';
-  $('r_form_title').textContent=`Edit Set ${x.setNo}/${rYearOf(x)}`;
-  status('r',`กำลังแก้ไข Set ${x.setNo}/${rYearOf(x)}`);
-  $('r_form').scrollIntoView({behavior:'smooth',block:'start'});
-}
-function deleteRefiner(id){
-  if(!requireAdmin())return;
-  const data=loadRefiner(), x=data.find(a=>a.id===id); if(!x)return;
-  if(!confirm(`Delete Set ${x.setNo}/${rYearOf(x)} ?`))return;
-  saveRefinerData(data.filter(a=>a.id!==id)); renderRefiner(); clearRefinerForm(); renderHomeDashboard();
-}
-function exportRefinerCSV(){
-  const data=loadRefiner().sort((a,b)=>a.change.localeCompare(b.change));
-  const head=['Set','Date changed','Date removed','Production (t)','Production time (hr)','Used (day)','Plate Stator','Plate Rotor','Center ring Stator','Center ring Rotor','Bolt + washer','SEC avg. (kWh/t)'];
-  const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';
-  const lines=[head.map(esc).join(',')];
-  data.forEach(x=>lines.push([
-    `Set ${x.setNo}/${rYearOf(x)}`,rDate(x.change),x.remove?rDate(x.remove):'In use',x.prod??'',x.hours??'',rDays(x.change,x.remove),x.ps,x.pr,x.cs,x.cr,x.bolt,x.sec??''
-  ].map(esc).join(',')));
-  const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Refiner_Plate_Record.csv';a.click();URL.revokeObjectURL(a.href);
-}
-
-
-// ---------- Cloud Report Database (V5.5 Public Operator Workflow) ----------
-const APP_VERSION='5.5.3';
-function cloudUserLabel(){const s=getDbSession();return s?.user?.email||'Public user';}
-function cloudReady(){return dbConfigured();}
-function setCloudStatus(kind,msg,cls=''){
-  const el=$(kind+'_cloud_status');if(!el)return;
-  el.className='status'+(cls?' '+cls:'');el.textContent=msg;
-}
-function reportKey(prefix,date,shift,values){
-  const raw=[prefix,date,shift,...values.map(v=>v===null||v===undefined?'':String(v))].join('|');
-  let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
-  return `${prefix}-${date}-${shift}-${(h>>>0).toString(16)}`;
-}
-async function dbUpsert(table,row){
-  if(!dbConfigured())throw new Error('Database not configured');
-  const s=getDbSession(),c=dbConfig(),token=s?.access_token||'';
-  const r=await fetch(`${c.url}/rest/v1/${table}?on_conflict=report_key`,{
-    method:'POST',headers:dbHeaders(token,{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates,return=representation'}),
-    body:JSON.stringify(row),cache:'no-store'
-  });
+async function deleteRefinerCloud(x){
+  const s=getDbSession();if(!s?.access_token||PROD_DB.role!=='admin')throw new Error('ต้อง Database Login ด้วยสิทธิ์ admin');
+  const c=dbConfig();const r=await fetch(`${c.url}/rest/v1/refiner_plate_records?record_year=eq.${rYearOf(x)}&set_no=eq.${x.setNo}`,{method:'DELETE',headers:dbHeaders(s.access_token),cache:'no-store'});
   const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);
-  try{return JSON.parse(text)}catch{return []}
 }
-function glueCloudRow(r,action='save'){
-  const date=$('g_date').value||todayISO(),shift=$('g_shift').value||'-',sess=getDbSession();
-  const bad=r.diff!==null&&Math.abs(r.diff)>0.30;
-  return {report_key:reportKey('glue',date,shift,[r.solid,r.density,r.fiber,r.actual,r.set,r.refSec,r.volumeL]),report_date:date,shift,
-    solid_pct:r.solid,density_g_ml:r.density,fiber_screw_kg_min:r.fiber,actual_capture_sec:r.actual,glue_set_pct:r.set,
-    wet_glue_kg_min:r.wet,dry_glue_kg_min:r.dry,glue_result_pct:r.pct,diff_pct_point:r.diff,reference_sec:r.refSec,container_l:r.volumeL,
-    result_status:bad?'OUT_OF_RANGE':'NORMAL',last_action:action,operator_email:null,created_by:sess?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+function rNum(v,digits=2){if(v===null||v===undefined||v==='')return '-';const n=Number(v);if(!Number.isFinite(n))return '-';return n.toLocaleString('en-US',{minimumFractionDigits:digits,maximumFractionDigits:digits})}
+function rDate(s){if(!s)return '-';const [y,m,d]=s.split('-');return `${d}/${m}/${y}`}
+function rDays(a,b){if(!a)return null;const end=b?new Date(b+'T00:00:00'):new Date();const start=new Date(a+'T00:00:00');return Math.max(0,Math.floor((end-start)/86400000))}
+function rYearOf(x){return x.change?Number(x.change.slice(0,4)):0}
+function refreshRefinerYears(prefer){const data=loadRefiner();const years=[...new Set(data.map(rYearOf).filter(Boolean))].sort((a,b)=>b-a);const cur=new Date().getFullYear();if(!years.includes(cur))years.unshift(cur);const sel=$('r_year');if(!sel)return;const wanted=String(prefer||sel.value||years[0]||cur);sel.innerHTML=years.map(y=>`<option value="${y}">${y}</option>`).join('');if(years.map(String).includes(wanted))sel.value=wanted}
+function renderRefiner(){
+  if(!$('r_body'))return;refreshRefinerYears();const year=Number($('r_year').value);const rows=loadRefiner().filter(x=>rYearOf(x)===year).sort((a,b)=>(a.setNo||0)-(b.setNo||0));
+  $('r_body').innerHTML=rows.length?rows.map(x=>{const days=rDays(x.change,x.remove);const daysText=x.remove?String(days):`<span class="inuse">${days} (In use)</span>`;return `<tr><td><span class="set-badge">Set ${x.setNo}/${year}</span></td><td>${rDate(x.change)}</td><td>${x.remove?rDate(x.remove):'<span class="inuse">In use</span>'}</td><td>${rNum(x.prod)}</td><td>${rNum(x.hours,1)}</td><td>${daysText}</td><td>${x.ps||'-'}</td><td>${x.pr||'-'}</td><td>${x.cs||'-'}</td><td>${x.cr||'-'}</td><td class="left">${x.bolt||'-'}</td><td>${rNum(x.sec,1)}</td><td>${dbAdminReady()?`<div class="record-actions"><button class="mini-btn" onclick="editRefiner('${x.id}')">Edit</button><button class="mini-btn danger" onclick="deleteRefiner('${x.id}')">Delete</button></div>`:'<span style="color:#64748b;font-size:12px;font-weight:700">View only</span>'}</td></tr>`}).join(''):`<tr><td colspan="13">ยังไม่มีข้อมูลปี ${year}</td></tr>`;
 }
-function sifterCloudRow(r,action='save'){
-  const date=$('s_date').value||todayISO(),shift=$('s_shift').value||'-',sess=getDbSession();
-  const st=r.pct>1?'HIGH':r.pct>0.5?'WARNING':'NORMAL';
-  return {report_key:reportKey('sifter',date,shift,[r.refiner,r.press,r.s1,r.s2,r.sec]),report_date:date,shift,
-    refiner_tph:r.refiner,press_m3_hr:r.press,sifter1_kg_min:r.s1,sifter2_kg_min:r.s2,sifter1_kg_hr:r.h1,sifter2_kg_hr:r.h2,
-    total_drop_tph:r.total,sifter_pct:r.pct,sec_set_kwh_t:r.sec,result_status:st,last_action:action,operator_email:null,created_by:sess?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+function clearRefinerForm(){refinerEditId=null;['r_change','r_remove','r_prod','r_hours','r_ps','r_pr','r_cs','r_cr','r_sec','r_bolt'].forEach(id=>$(id).value='');$('r_form_title').textContent='Add Refiner Plate Record';status('r','พร้อมบันทึกข้อมูล')}
+function requireRefinerAdmin(){if(dbAdminReady())return true;alert('Refiner Cloud Master: กรุณา Database Login ด้วยบัญชี Admin ที่หน้า Shared Master Data ก่อน');return false}
+function newRefinerRecord(){if(!requireRefinerAdmin())return;clearRefinerForm();$('r_change').value=`${$('r_year').value}-01-01`;$('r_change').focus()}
+function nextSetNo(data,year){return Math.max(0,...data.filter(x=>rYearOf(x)===year).map(x=>Number(x.setNo)||0))+1}
+async function saveRefinerRecord(){
+  if(!requireRefinerAdmin())return;const change=$('r_change').value,remove=$('r_remove').value;if(!change){status('r','กรุณาระบุ Date changed','warn');return}if(remove&&new Date(remove)<new Date(change)){status('r','Date removed ต้องไม่ก่อน Date changed','warn');return}
+  const data=loadRefiner();const year=Number(change.slice(0,4));const obj={id:refinerEditId||('r-'+Date.now()),setNo:null,change,remove,prod:$('r_prod').value===''?null:Number($('r_prod').value),hours:$('r_hours').value===''?null:Number($('r_hours').value),ps:$('r_ps').value.trim()||'-',pr:$('r_pr').value.trim()||'-',cs:$('r_cs').value.trim()||'-',cr:$('r_cr').value.trim()||'-',bolt:$('r_bolt').value.trim()||'-',sec:$('r_sec').value===''?null:Number($('r_sec').value)};
+  if(refinerEditId){const old=data.find(x=>x.id===refinerEditId);if(!old)return;const oldYear=rYearOf(old);obj.setNo=(oldYear===year)?old.setNo:nextSetNo(data,year)}else obj.setNo=nextSetNo(data,year);
+  status('r','กำลังบันทึก Supabase…');try{await upsertRefinerCloud(obj);await loadRefinerCloud(false);refreshRefinerYears(year);$('r_year').value=String(year);renderRefiner();clearRefinerForm();renderHomeRefiner();status('r',`บันทึก Set ${obj.setNo}/${year} ลง Database เรียบร้อย ✓`,'good')}catch(e){status('r','บันทึกไม่สำเร็จ • '+String(e?.message||e),'warn')}
 }
-async function saveGlueCloudReport(r,action='save',quiet=false){
-  if(!cloudReady()){setCloudStatus('g','Cloud unavailable • saved only on this device','warn');return false;}
-  try{await dbUpsert('glue_flow_reports',glueCloudRow(r,action));setCloudStatus('g',`Saved to Database ✓ • ${action}`,'good');await loadGlueCloudHistory();refreshHomeDashboard();return true}
-  catch(e){setCloudStatus('g','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
-}
-async function saveSifterCloudReport(r,action='save',quiet=false){
-  if(!cloudReady()){setCloudStatus('s','Cloud unavailable • saved only on this device','warn');return false;}
-  try{await dbUpsert('sifter_reports',sifterCloudRow(r,action));setCloudStatus('s',`Saved to Database ✓ • ${action}`,'good');await loadSifterCloudHistory();refreshHomeDashboard();return true}
-  catch(e){setCloudStatus('s','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
-}
-function fmtCloudTime(x){try{return new Date(x).toLocaleString('th-TH',{dateStyle:'short',timeStyle:'short'})}catch{return x||'-'}}
-async function publicSelect(table,query=''){
-  if(!dbConfigured())throw new Error('Database not configured');
-  const c=dbConfig(),s=getDbSession(),token=s?.access_token||'';
-  const r=await fetch(`${c.url}/rest/v1/${table}?${query}`,{headers:dbHeaders(token),cache:'no-store'});
-  const text=await r.text();if(!r.ok)throw new Error(`HTTP ${r.status} ${text}`);return JSON.parse(text||'[]');
-}
-async function loadGlueCloudHistory(){
-  const body=$('g_cloud_body');if(!body)return;
-  if(!cloudReady()){body.innerHTML='<tr><td colspan="7">Database unavailable</td></tr>';setCloudStatus('g','Cloud unavailable','warn');return;}
-  try{const rows=await publicSelect('glue_flow_reports','select=*&order=created_at.desc&limit=30');
-    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.glue_result_pct,2)}</strong></td><td>${x.glue_set_pct===null?'-':rNum(x.glue_set_pct,2)}</td><td>${x.diff_pct_point===null?'-':((Number(x.diff_pct_point)>=0?'+':'')+Number(x.diff_pct_point).toFixed(2))}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="7">ยังไม่มี Cloud Report</td></tr>';
-    setCloudStatus('g',`Cloud connected • ${rows.length} recent report(s) • Login not required`,'good');
-  }catch(e){body.innerHTML='<tr><td colspan="7">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('g','Cloud history failed • '+String(e?.message||e),'warn')}
-}
-async function loadSifterCloudHistory(){
-  const body=$('s_cloud_body');if(!body)return;
-  if(!cloudReady()){body.innerHTML='<tr><td colspan="6">Database unavailable</td></tr>';setCloudStatus('s','Cloud unavailable','warn');return;}
-  try{const rows=await publicSelect('sifter_reports','select=*&order=created_at.desc&limit=30');
-    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.sifter_pct,2)}</strong></td><td>${rNum(x.total_drop_tph,5)}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="6">ยังไม่มี Cloud Report</td></tr>';
-    setCloudStatus('s',`Cloud connected • ${rows.length} recent report(s) • Login not required`,'good');
-  }catch(e){body.innerHTML='<tr><td colspan="6">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('s','Cloud history failed • '+String(e?.message||e),'warn')}
-}
-async function refreshCloudReportHistory(kind){if(kind==='g')await loadGlueCloudHistory();else await loadSifterCloudHistory();}
+function editRefiner(id){if(!requireRefinerAdmin())return;const x=loadRefiner().find(a=>a.id===id);if(!x)return;refinerEditId=id;$('r_change').value=x.change||'';$('r_remove').value=x.remove||'';$('r_prod').value=x.prod??'';$('r_hours').value=x.hours??'';$('r_ps').value=x.ps==='-'?'':x.ps||'';$('r_pr').value=x.pr==='-'?'':x.pr||'';$('r_cs').value=x.cs==='-'?'':x.cs||'';$('r_cr').value=x.cr==='-'?'':x.cr||'';$('r_bolt').value=x.bolt==='-'?'':x.bolt||'';$('r_sec').value=x.sec??'';$('r_form_title').textContent=`Edit Set ${x.setNo}/${rYearOf(x)}`;status('r',`กำลังแก้ไข Set ${x.setNo}/${rYearOf(x)}`);$('r_form').scrollIntoView({behavior:'smooth',block:'start'})}
+async function deleteRefiner(id){if(!requireRefinerAdmin())return;const x=loadRefiner().find(a=>a.id===id);if(!x)return;if(!confirm(`Delete Set ${x.setNo}/${rYearOf(x)} ?`))return;try{await deleteRefinerCloud(x);await loadRefinerCloud(false);clearRefinerForm();renderHomeRefiner();status('r',`ลบ Set ${x.setNo}/${rYearOf(x)} เรียบร้อย`,'good')}catch(e){status('r','ลบไม่สำเร็จ • '+String(e?.message||e),'warn')}}
+function exportRefinerCSV(){const data=loadRefiner().sort((a,b)=>a.change.localeCompare(b.change));const head=['Set','Date changed','Date removed','Production (t)','Production time (hr)','Used (day)','Plate Stator','Plate Rotor','Center ring Stator','Center ring Rotor','Bolt + washer','SEC avg. (kWh/t)'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const lines=[head.map(esc).join(',')];data.forEach(x=>lines.push([`Set ${x.setNo}/${rYearOf(x)}`,rDate(x.change),x.remove?rDate(x.remove):'In use',x.prod??'',x.hours??'',rDays(x.change,x.remove),x.ps,x.pr,x.cs,x.cr,x.bolt,x.sec??''].map(esc).join(',')));const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Refiner_Plate_Record.csv';a.click();URL.revokeObjectURL(a.href)}
+function renderHomeRefiner(){if(!$('dash_refiner_value'))return;const ref=loadRefiner().filter(x=>x.change).sort((a,b)=>String(b.change).localeCompare(String(a.change))||Number(b.setNo)-Number(a.setNo))[0];if(ref){const yr=String(ref.change).slice(0,4);$('dash_refiner_value').textContent=`Set ${ref.setNo}/${yr}`;if(!ref.remove){const days=rDays(ref.change,'');$('dash_refiner_sub').textContent=`${REFINER_CLOUD_LOADED?'Cloud • ':''}In use • ${days} days`;setDashCard('dash_refiner','dash-ok')}else{$('dash_refiner_sub').textContent=(REFINER_CLOUD_LOADED?'Cloud • ':'')+'Latest recorded set';setDashCard('dash_refiner','dash-neutral')}}}
 
 // ---------- Glue Flow ----------
 const GLUE_SETTINGS_KEY='production_cal_glue_settings_v1';
@@ -1585,7 +1458,7 @@ function goPage(id){
   $('main_tabs').style.display=id==='h'?'none':'grid';
   if(id==='g'){syncGlueSettings();renderGlueRecords();$('g_shift').value=getHomeShift();loadGlueCloudHistory();}
   if(id==='s'){renderSifterRecords();$('s_shift').value=getHomeShift();loadSifterCloudHistory();}
-  if(id==='r')renderRefiner();
+  if(id==='r'){renderRefiner();loadRefinerCloud();}
   if(id==='rec'){initRecipeLibrary();updateRecipeAdminUI();}
   if(id==='d')initDailyReport();
   if(id==='gt')calcGlueTank();
@@ -1655,7 +1528,7 @@ refreshHomeDashboard();
 initRecipeLibrary();
 updateDbAdminUI();
 applyPressLength(DEFAULT_PRESS_LENGTH,'Local fallback');
-loadDbRole().then(()=>loadMasterData()).then(()=>{loadGlueCloudHistory();loadSifterCloudHistory();});
+loadDbRole().then(()=>loadMasterData()).then(()=>{loadGlueCloudHistory();loadSifterCloudHistory();loadRefinerCloud();});
 
 if('serviceWorker' in navigator){
   window.addEventListener('load',()=>{
