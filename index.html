@@ -178,7 +178,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.5.7 PWA • Report History Runtime Fix • Created by Tom Wissanu</div>
+    <div class="version">V5.5.8 PWA • Operator Report Save & Share Fix • Created by Tom Wissanu</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -765,7 +765,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V5.5.7 • Report History Runtime Fix • Production Shift 1 Tools • Created by Tom Wissanu</div>
+  <div class="footer">V5.5.8 • Operator Report Save & Share Fix • Production Shift 1 Tools • Created by Tom Wissanu</div>
 </div>
 
 <script src="./config.js"></script>
@@ -824,7 +824,7 @@ async function loadProductMaster(){
     PROD_DB.products=await r.json();renderProductMaster();
   }catch{PROD_DB.products=[];renderProductMaster();}
 }
-const APP_VERSION='5.5.7';
+const APP_VERSION='5.5.8';
 function cloudReady(){const c=dbConfig();return !!(c&&c.url&&c.key);}
 async function publicSelect(table,query='select=*'){
   if(!cloudReady())throw new Error('Database not configured');
@@ -1196,6 +1196,60 @@ function editRefiner(id){if(!requireRefinerAdmin())return;const x=loadRefiner().
 async function deleteRefiner(id){if(!requireRefinerAdmin())return;const x=loadRefiner().find(a=>a.id===id);if(!x)return;if(!confirm(`Delete Set ${x.setNo}/${rYearOf(x)} ?`))return;try{await deleteRefinerCloud(x);await loadRefinerCloud(false);clearRefinerForm();renderHomeRefiner();status('r',`ลบ Set ${x.setNo}/${rYearOf(x)} เรียบร้อย`,'good')}catch(e){status('r','ลบไม่สำเร็จ • '+String(e?.message||e),'warn')}}
 function exportRefinerCSV(){const data=loadRefiner().sort((a,b)=>a.change.localeCompare(b.change));const head=['Set','Date changed','Date removed','Production (t)','Production time (hr)','Used (day)','Plate Stator','Plate Rotor','Center ring Stator','Center ring Rotor','Bolt + washer','SEC avg. (kWh/t)'];const esc=v=>'"'+String(v??'').replaceAll('"','""')+'"';const lines=[head.map(esc).join(',')];data.forEach(x=>lines.push([`Set ${x.setNo}/${rYearOf(x)}`,rDate(x.change),x.remove?rDate(x.remove):'In use',x.prod??'',x.hours??'',rDays(x.change,x.remove),x.ps,x.pr,x.cs,x.cr,x.bolt,x.sec??''].map(esc).join(',')));const blob=new Blob(['\ufeff'+lines.join('\n')],{type:'text/csv;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='Refiner_Plate_Record.csv';a.click();URL.revokeObjectURL(a.href)}
 function renderHomeRefiner(){if(!$('dash_refiner_value'))return;const ref=loadRefiner().filter(x=>x.change).sort((a,b)=>String(b.change).localeCompare(String(a.change))||Number(b.setNo)-Number(a.setNo))[0];if(ref){const yr=String(ref.change).slice(0,4);$('dash_refiner_value').textContent=`Set ${ref.setNo}/${yr}`;if(!ref.remove){const days=rDays(ref.change,'');$('dash_refiner_sub').textContent=`${REFINER_CLOUD_LOADED?'Cloud • ':''}In use • ${days} days`;setDashCard('dash_refiner','dash-ok')}else{$('dash_refiner_sub').textContent=(REFINER_CLOUD_LOADED?'Cloud • ':'')+'Latest recorded set';setDashCard('dash_refiner','dash-neutral')}}}
+
+
+// ---------- Cloud Report helpers (Glue Flow / Sifter) ----------
+function reportKey(prefix,date,shift,values){
+  const raw=[prefix,date,shift,...values.map(v=>v===null||v===undefined?'':String(v))].join('|');
+  let h=2166136261;for(let i=0;i<raw.length;i++){h^=raw.charCodeAt(i);h=Math.imul(h,16777619)}
+  return `${prefix}-${date}-${shift}-${(h>>>0).toString(16)}`;
+}
+function setCloudStatus(kind,msg,level=''){
+  const el=$(kind==='g'?'g_cloud_status':'s_cloud_status');
+  if(!el)return; el.className='status'+(level?' '+level:''); el.textContent=msg;
+}
+function glueCloudRow(r,action='save'){
+  const date=$('g_date').value||todayISO(),shift=$('g_shift').value||'-',sess=getDbSession();
+  const bad=r.diff!==null&&Math.abs(r.diff)>0.30;
+  return {report_key:reportKey('glue',date,shift,[r.solid,r.density,r.fiber,r.actual,r.set,r.refSec,r.volumeL]),report_date:date,shift,
+    solid_pct:r.solid,density_g_ml:r.density,fiber_screw_kg_min:r.fiber,actual_capture_sec:r.actual,glue_set_pct:r.set,
+    wet_glue_kg_min:r.wet,dry_glue_kg_min:r.dry,glue_result_pct:r.pct,diff_pct_point:r.diff,reference_sec:r.refSec,container_l:r.volumeL,
+    result_status:bad?'OUT_OF_RANGE':'NORMAL',last_action:action,operator_email:null,created_by:sess?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+}
+function sifterCloudRow(r,action='save'){
+  const date=$('s_date').value||todayISO(),shift=$('s_shift').value||'-',sess=getDbSession();
+  const st=r.pct>1?'HIGH':r.pct>0.5?'WARNING':'NORMAL';
+  return {report_key:reportKey('sifter',date,shift,[r.refiner,r.press,r.s1,r.s2,r.sec]),report_date:date,shift,
+    refiner_tph:r.refiner,press_m3_hr:r.press,sifter1_kg_min:r.s1,sifter2_kg_min:r.s2,sifter1_kg_hr:r.h1,sifter2_kg_hr:r.h2,
+    total_drop_tph:r.total,sifter_pct:r.pct,sec_set_kwh_t:r.sec,result_status:st,last_action:action,operator_email:null,created_by:sess?.user?.id||null,app_version:APP_VERSION,updated_at:new Date().toISOString()};
+}
+async function loadGlueCloudHistory(){
+  const body=$('g_cloud_body');if(!body)return;
+  if(!cloudReady()){body.innerHTML='<tr><td colspan="7">Database unavailable</td></tr>';setCloudStatus('g','Cloud unavailable','warn');return;}
+  try{const rows=await publicSelect('glue_flow_reports','select=*&order=created_at.desc&limit=30');
+    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.glue_result_pct,2)}</strong></td><td>${x.glue_set_pct===null?'-':rNum(x.glue_set_pct,2)}</td><td>${x.diff_pct_point===null?'-':((Number(x.diff_pct_point)>=0?'+':'')+Number(x.diff_pct_point).toFixed(2))}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="7">ยังไม่มี Cloud Report</td></tr>';
+    setCloudStatus('g',`Cloud connected • ${rows.length} recent report(s) • Login not required`,'good');
+  }catch(e){body.innerHTML='<tr><td colspan="7">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('g','Cloud history failed • '+String(e?.message||e),'warn')}
+}
+async function loadSifterCloudHistory(){
+  const body=$('s_cloud_body');if(!body)return;
+  if(!cloudReady()){body.innerHTML='<tr><td colspan="6">Database unavailable</td></tr>';setCloudStatus('s','Cloud unavailable','warn');return;}
+  try{const rows=await publicSelect('sifter_reports','select=*&order=created_at.desc&limit=30');
+    body.innerHTML=rows.length?rows.map(x=>`<tr><td>${fmtCloudTime(x.created_at)}</td><td>${escapeHtml(x.shift||'-')}</td><td><strong>${rNum(x.sifter_pct,2)}</strong></td><td>${rNum(x.total_drop_tph,5)}</td><td>${escapeHtml(x.result_status||'-')}</td><td>${escapeHtml(x.last_action||'-')}</td></tr>`).join(''):'<tr><td colspan="6">ยังไม่มี Cloud Report</td></tr>';
+    setCloudStatus('s',`Cloud connected • ${rows.length} recent report(s) • Login not required`,'good');
+  }catch(e){body.innerHTML='<tr><td colspan="6">โหลด Cloud History ไม่สำเร็จ</td></tr>';setCloudStatus('s','Cloud history failed • '+String(e?.message||e),'warn')}
+}
+async function saveGlueCloudReport(r,action='save',quiet=false){
+  if(!cloudReady()){setCloudStatus('g','Cloud unavailable • saved only on this device','warn');return false;}
+  try{await dbUpsert('glue_flow_reports',glueCloudRow(r,action));setCloudStatus('g',`Saved to Database ✓ • ${action}`,'good');await loadGlueCloudHistory();refreshHomeDashboard();return true}
+  catch(e){setCloudStatus('g','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
+}
+async function saveSifterCloudReport(r,action='save',quiet=false){
+  if(!cloudReady()){setCloudStatus('s','Cloud unavailable • saved only on this device','warn');return false;}
+  try{await dbUpsert('sifter_reports',sifterCloudRow(r,action));setCloudStatus('s',`Saved to Database ✓ • ${action}`,'good');await loadSifterCloudHistory();refreshHomeDashboard();return true}
+  catch(e){setCloudStatus('s','Cloud save failed • '+String(e?.message||e),'warn');if(!quiet)console.error(e);return false}
+}
+async function refreshCloudReportHistory(kind){if(kind==='g')await loadGlueCloudHistory();else await loadSifterCloudHistory();}
 
 // ---------- Glue Flow ----------
 const GLUE_SETTINGS_KEY='production_cal_glue_settings_v1';
@@ -1752,7 +1806,7 @@ function opsDetailBox(o,top,rows){
 function opsFooter(o){
   const {x,W,H,P}=o;
   x.fillStyle='#dfe7ef';x.fillRect(P,H-122,W-2*P,1);
-  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.5.6 • Created by Tom Wissanu',P,H-76);
+  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.5.8 • Created by Tom Wissanu',P,H-76);
   x.textAlign='right';x.fillText('Production Department',W-P,H-76);x.textAlign='left';
 }
 function canvasToPngBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create PNG')),'image/png',0.95));}
