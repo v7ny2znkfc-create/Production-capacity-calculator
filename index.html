@@ -178,7 +178,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
   <div class="hero">
     <h1>Production Capacity Calculator</h1>
     <p>Capacity • Speed • Press Factor • Production Time • Refiner • Glue Flow • Sifter</p>
-    <div class="version">V5.5.8 PWA • Operator Report Save & Share Fix • Created by Tom Wissanu</div>
+    <div class="version">V5.5.9 PWA • Operator Report Save & Share Fix • Created by Tom Wissanu</div>
   </div>
 
   <div class="tabs" id="main_tabs" style="display:none">
@@ -646,6 +646,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
       <div><label>CTS (m³)</label><input id="d_cts" type="number" step="any"></div>
       <div><label>WIP [All] (m³)</label><input id="d_wip" type="number" step="any"></div>
       <div><label>Wait for Grading (m³)</label><input id="d_grading" type="number" step="any"></div>
+      <div><label>Ware house (m³)</label><input id="d_warehouse" type="number" step="any"></div>
       <div><label>Melamine line (pcs)</label><input id="d_melamine" type="number" step="1"></div>
     </div>
 
@@ -765,7 +766,7 @@ input[readonly]{background:#f1f5f9;color:#475569;font-weight:800;cursor:not-allo
     </div>
   </div></section>
 
-  <div class="footer">V5.5.8 • Operator Report Save & Share Fix • Production Shift 1 Tools • Created by Tom Wissanu</div>
+  <div class="footer">V5.5.9 • Operator Report Save & Share Fix • Production Shift 1 Tools • Created by Tom Wissanu</div>
 </div>
 
 <script src="./config.js"></script>
@@ -1615,7 +1616,7 @@ if('serviceWorker' in navigator){
 
 // ---------- Daily Report ----------
 const DAILY_KEY='production_cal_daily_reports_v1';
-const dailyFields=['d_date','d_log','d_incoming','d_waiting','d_chipper','d_silo','d_rubber','d_mtd','d_sanding','d_cts','d_wip','d_grading','d_melamine','d_days','d_ton','d_avgton','d_avgsec','d_secset','d_wear','d_digestor','d_refinerbar','d_cooking','d_coarse_fiber','d_dust','d_remark'];
+const dailyFields=['d_date','d_log','d_incoming','d_waiting','d_chipper','d_silo','d_rubber','d_mtd','d_sanding','d_cts','d_wip','d_grading','d_warehouse','d_melamine','d_days','d_ton','d_avgton','d_avgsec','d_secset','d_wear','d_digestor','d_refinerbar','d_cooking','d_coarse_fiber','d_dust','d_remark'];
 function nval(id){const x=parseFloat($(id)?.value);return Number.isFinite(x)?x:0}
 function addDTRow(name='',count='',minutes=''){
   const row=document.createElement('div'); row.className='grid'; row.style.marginBottom='8px';
@@ -1692,7 +1693,7 @@ function buildDailyText(){
   const date=$('d_date').value||''; const dt=[...document.querySelectorAll('#dt_rows .grid')];
   const runs=[...document.querySelectorAll('#run_rows tr')];
   let s=`Daily report  ${formatDailyDate(date)}\n\n`;
-  s+=reportLine('log stock','d_log',' ton')+'\n'+reportLine('Incoming Truck','d_incoming')+'\n'+reportLine('Waiting Truck','d_waiting')+'\n'+reportLine('Chipper','d_chipper',' ton')+'\n'+reportLine('Chip Silo','d_silo',' %')+'\n'+reportLine('Rubber on floor','d_rubber',' ton')+'\n'+reportLine('PD1','d_pd1',' m³')+'\n'+reportLine('PD1 MTD DT','d_mtd',' %')+'\n'+reportLine('Sanding','d_sanding',' m³')+'\n'+reportLine('CTS','d_cts',' m³')+'\n'+reportLine('WIP [ All]','d_wip',' m³')+'\n'+reportLine('Wait for Grading','d_grading',' m³')+'\n'+reportLine('Melamine line','d_melamine',' pcs')+'\n\nSegment\n';
+  s+=reportLine('log stock','d_log',' ton')+'\n'+reportLine('Incoming Truck','d_incoming')+'\n'+reportLine('Waiting Truck','d_waiting')+'\n'+reportLine('Chipper','d_chipper',' ton')+'\n'+reportLine('Chip Silo','d_silo',' %')+'\n'+reportLine('Rubber on floor','d_rubber',' ton')+'\n'+reportLine('PD1','d_pd1',' m³')+'\n'+reportLine('PD1 MTD DT','d_mtd',' %')+'\n'+reportLine('Sanding','d_sanding',' m³')+'\n'+reportLine('CTS','d_cts',' m³')+'\n'+reportLine('WIP [ All]','d_wip',' m³')+'\n'+reportLine('Wait for Grading','d_grading',' m³')+'\n'+reportLine('Ware house','d_warehouse',' m³')+'\n'+reportLine('Melamine line','d_melamine',' pcs')+'\n\nSegment\n';
   s+=reportLine('Running days','d_days',' day')+'\n'+reportLine('Running Ton','d_ton',' ton')+'\n'+reportLine('Average','d_avgton',' ton/h')+'\n'+reportLine('Average','d_avgsec',' kWh/t')+'\n'+reportLine('SEC set now','d_secset',' kWh/t')+'\n'+reportLine('Wear','d_wear',' mm')+'\n'+reportLine('Digestor','d_digestor',' Bar')+'\n'+reportLine('Refiner','d_refinerbar',' Bar')+'\n'+reportLine('Cooking time','d_cooking',' min')+'\n'+reportLine('Coarse Fiber','d_coarse_fiber',' %')+'\n'+reportLine('Dust','d_dust',' %')+'\n\nRemark\n'+($('d_remark').value||'')+'\n\nPD1 yesterday major DT\n';
   dt.forEach(r=>{const n=r.querySelector('.dt_name').value||'-',c=r.querySelector('.dt_count').value||'0',m=r.querySelector('.dt_min').value||'0';s+=`${n} ${c} x : ${m} min\n`});
   s+=`Total major DT : ${$('dt_total_hr').textContent} Hrs\n\nPD1 yesterday running\n`;
@@ -1751,7 +1752,7 @@ function showCentralHistoryDetail(type,key){
   const x=CENTRAL_HISTORY.find(r=>r._type===type&&r.report_key===key);if(!x)return;let html='';
   if(type==='GLUE')html=detailRows(x,[['Date','report_date'],['Shift','shift'],['Solid','solid_pct','%'],['Density','density_g_ml','g/ml'],['Fiber Screw','fiber_screw_kg_min','kg/min'],['Capture time','actual_capture_sec','sec'],['Glue Set','glue_set_pct','%'],['Glue Result','glue_result_pct','%'],['Diff','diff_pct_point','% point'],['Wet glue','wet_glue_kg_min','kg/min'],['Glue solid','dry_glue_kg_min','kg/min'],['Status','result_status']]);
   else if(type==='SIFTER')html=detailRows(x,[['Date','report_date'],['Shift','shift'],['Refiner','refiner_tph','t/hr'],['Press performance','press_m3_hr','m³/hr'],['Sifter 1','sifter1_kg_min','kg/min'],['Sifter 2','sifter2_kg_min','kg/min'],['Total drop','total_drop_tph','t/hr'],['Sifter Result','sifter_pct','%'],['SEC Set','sec_set_kwh_t','kWh/t'],['Status','result_status']]);
-  else {const d=x.report_data||{};html=`<div class="detail-grid"><div><span>Date</span><strong>${escapeHtml(formatDailyDate(x.report_date))}</strong></div><div><span>PD1</span><strong>${escapeHtml(String(x.pd1_m3??'-'))} m³</strong></div><div><span>Major DT</span><strong>${escapeHtml(String(x.total_major_dt_hr??'-'))} hr</strong></div></div>`+detailRows(d,[['Coarse Fiber','d_coarse_fiber','%'],['Dust','d_dust','%']])+`<div style="margin-top:14px"><strong>Remark</strong><div style="margin-top:6px;padding:10px;background:#f8fafc;border-radius:10px">${escapeHtml(d.d_remark||'-')}</div></div>`;}
+  else {const d=x.report_data||{};html=`<div class="detail-grid"><div><span>Date</span><strong>${escapeHtml(formatDailyDate(x.report_date))}</strong></div><div><span>PD1</span><strong>${escapeHtml(String(x.pd1_m3??'-'))} m³</strong></div><div><span>Major DT</span><strong>${escapeHtml(String(x.total_major_dt_hr??'-'))} hr</strong></div></div>`+detailRows(d,[['Ware house','d_warehouse','m³'],['Coarse Fiber','d_coarse_fiber','%'],['Dust','d_dust','%']])+`<div style="margin-top:14px"><strong>Remark</strong><div style="margin-top:6px;padding:10px;background:#f8fafc;border-radius:10px">${escapeHtml(d.d_remark||'-')}</div></div>`;}
   $('hist_dialog_title').textContent=(type==='GLUE'?'Glue Flow':type==='SIFTER'?'Sifter':'Daily Report')+' • '+(type==='DAILY'?formatDailyDate(x.report_date):(x.report_date||''))+(type==='DAILY'?'':' • Shift '+(x.shift||'-'));$('hist_dialog_body').innerHTML=html;$('hist_dialog').showModal();
 }
 
@@ -1806,7 +1807,7 @@ function opsDetailBox(o,top,rows){
 function opsFooter(o){
   const {x,W,H,P}=o;
   x.fillStyle='#dfe7ef';x.fillRect(P,H-122,W-2*P,1);
-  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.5.8 • Created by Tom Wissanu',P,H-76);
+  x.fillStyle='#718096';x.font='18px Arial';x.fillText('Generated by Production Capacity Calculator V5.5.9 • Created by Tom Wissanu',P,H-76);
   x.textAlign='right';x.fillText('Production Department',W-P,H-76);x.textAlign='left';
 }
 function canvasToPngBlob(canvas){return new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('Unable to create PNG')),'image/png',0.95));}
@@ -1856,7 +1857,7 @@ async function shareSifterReportImage(){const r=calculateSifter();if(!r)return;a
 function makeDailyReportCanvas(){
  const W=1080,P=54,G=20, dt=[...document.querySelectorAll('#dt_rows .grid')],
  runs=[...document.querySelectorAll('#run_rows tr')].filter(r=>[...r.querySelectorAll('input')].some(i=>i.value));
- const sum=[['Log stock',$('d_log').value,'ton'],['Incoming Truck',$('d_incoming').value,''],['Waiting Truck',$('d_waiting').value,''],['Chipper',$('d_chipper').value,'ton'],['Chip Silo',$('d_silo').value,'%'],['Rubber on floor',$('d_rubber').value,'ton'],['PD1',$('d_pd1').value,'m³'],['PD1 MTD DT',$('d_mtd').value,'%'],['Sanding',$('d_sanding').value,'m³'],['CTS',$('d_cts').value,'m³'],['WIP [All]',$('d_wip').value,'m³'],['Wait for Grading',$('d_grading').value,'m³'],['Melamine line',$('d_melamine').value,'pcs']];
+ const sum=[['Log stock',$('d_log').value,'ton'],['Incoming Truck',$('d_incoming').value,''],['Waiting Truck',$('d_waiting').value,''],['Chipper',$('d_chipper').value,'ton'],['Chip Silo',$('d_silo').value,'%'],['Rubber on floor',$('d_rubber').value,'ton'],['PD1',$('d_pd1').value,'m³'],['PD1 MTD DT',$('d_mtd').value,'%'],['Sanding',$('d_sanding').value,'m³'],['CTS',$('d_cts').value,'m³'],['WIP [All]',$('d_wip').value,'m³'],['Wait for Grading',$('d_grading').value,'m³'],['Ware house',$('d_warehouse').value,'m³'],['Melamine line',$('d_melamine').value,'pcs']];
  const seg=[['Running days',$('d_days').value,'day'],['Running Ton',$('d_ton').value,'ton'],['Average',$('d_avgton').value,'ton/h'],['Average SEC',$('d_avgsec').value,'kWh/t'],['SEC set now',$('d_secset').value,'kWh/t'],['Wear',$('d_wear').value,'mm'],['Digestor',$('d_digestor').value,'Bar'],['Refiner',$('d_refinerbar').value,'Bar'],['Cooking time',$('d_cooking').value,'min'],['Coarse Fiber',$('d_coarse_fiber').value,'%'],['Dust',$('d_dust').value,'%']];
  const cardH=a=>58+Math.ceil(a.length/3)*68;
  const H=178+cardH(sum)+G+cardH(seg)+G+92+Math.max(1,dt.length)*42+G+112+Math.max(1,runs.length)*46+(($('d_remark').value||'').trim()?130:0)+70;
